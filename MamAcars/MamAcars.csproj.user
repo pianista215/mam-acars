@@ -7,39 +7,39 @@
     </ApplicationDefinition>
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="ConfirmFlightPage.xaml.cs">
+    <Compile Update="Views\ConfirmFlightPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="FlightConfirmedPage.xaml.cs">
+    <Compile Update="Views\FlightConfirmedPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="FlightRecordingPage.xaml.cs">
+    <Compile Update="Views\FlightRecordingPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="LoginPage.xaml.cs">
+    <Compile Update="Views\LoginPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="FlightInfoPage .xaml.cs">
+    <Compile Update="Views\FlightInfoPage .xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="ConfirmFlightPage.xaml">
+    <Page Update="Views\ConfirmFlightPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="FlightConfirmedPage.xaml">
+    <Page Update="Views\FlightConfirmedPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="FlightRecordingPage.xaml">
+    <Page Update="Views\FlightRecordingPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="MainWindow.xaml">
+    <Page Update="Views\MainWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="LoginPage.xaml">
+    <Page Update="Views\LoginPage.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="FlightInfoPage .xaml">
+    <Page Update="Views\FlightInfoPage .xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

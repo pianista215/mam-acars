@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MamAcars.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,16 +20,28 @@ namespace MamAcars
     {
         private Action _onLoginSuccess;
 
+        private LoginViewModel _viewModel;
+
         public LoginPage(Action onLoginSuccess)
         {
             InitializeComponent();
+            _viewModel = new LoginViewModel();
+            DataContext = _viewModel;
             _onLoginSuccess = onLoginSuccess;
         }
 
-        private void OnLoginClicked(object sender, RoutedEventArgs e)
+        private async void OnLoginClicked(object sender, RoutedEventArgs e)
         {
-            // Aquí haces la autenticación, si es exitosa:
-            _onLoginSuccess();
+            if (await _viewModel.Login())
+            {
+                // Login successful, call the onLoginSuccess action (passed in from outside)
+                _onLoginSuccess();
+            }
+            else
+            {
+                // Show error message to the user
+                MessageBox.Show("Login failed!");
+            }
         }
     }
 }
