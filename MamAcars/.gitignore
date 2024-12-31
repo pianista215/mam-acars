@@ -1,0 +1,23 @@
+# Ignorar archivos temporales de Visual Studio
+.vs/
+*.suo
+*.user
+*.tmp
+*.log
+endofline
+
+# Ignorar carpetas de salida de compilación
+bin/
+obj/
+
+# Ignorar paquetes NuGet
+packages/
+
+# Ignorar archivos de caché
+*.pdb
+*.exe
+
+# Otros archivos a ignorar (ajusta según tu proyecto)
+*.suo
+*.user
+*.sln.docstates
