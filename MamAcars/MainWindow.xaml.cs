@@ -15,14 +15,39 @@ using System.Windows.Shapes;
 
 namespace MamAcars
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+
     public partial class MainWindow : Window
     {
         public MainWindow()
         {
             InitializeComponent();
+
+            ShowLoginPage();
+        }
+
+        private void ShowLoginPage()
+        {
+            MainFrame.Navigate(new LoginPage(OnLoginSuccess));
+        }
+
+        private void OnLoginSuccess()
+        {
+            MainFrame.Navigate(new FlightInfoPage(OnStartFlight));
+        }
+
+        private void OnStartFlight()
+        {
+            MainFrame.Navigate(new FlightRecordingPage(OnEndFlight));
+        }
+
+        private void OnEndFlight()
+        {
+            MainFrame.Navigate(new ConfirmFlightPage(OnSendFlight));
+        }
+
+        private void OnSendFlight()
+        {
+            MainFrame.Navigate(new FlightConfirmedPage());
         }
     }
 }
