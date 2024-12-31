@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Mam Acars" 
         ResizeMode="NoResize"
-        Height="450" Width="800">
+        SizeToContent="WidthAndHeight">
     <Grid>
         <Frame Name="MainFrame" NavigationUIVisibility="Hidden" />
     </Grid>
