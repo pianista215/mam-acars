@@ -1,4 +1,4 @@
-# Ignorar archivos temporales de Visual Studio
+# Ignore Visual Studio temporary files
 .vs/
 *.suo
 *.user
@@ -6,18 +6,18 @@
 *.log
 endofline
 
-# Ignorar carpetas de salida de compilación
+# Ignore build output folders
 bin/
 obj/
 
-# Ignorar paquetes NuGet
+# Ignore NuGet packages
 packages/
 
-# Ignorar archivos de caché
+# Ignore cache files
 *.pdb
 *.exe
 
-# Otros archivos a ignorar (ajusta según tu proyecto)
+# Other files to ignore (adjust according to your project)
 *.suo
 *.user
 *.sln.docstates
