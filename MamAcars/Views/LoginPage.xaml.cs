@@ -30,17 +30,41 @@ namespace MamAcars
             _onLoginSuccess = onLoginSuccess;
         }
 
+        private void disableComponents()
+        {
+            LoginBtn.IsEnabled = false;
+            LicenseTextbox.IsEnabled = false;
+            PasswordBox.IsEnabled = false;
+            ErrorTextBlock.Visibility = Visibility.Hidden;
+        }
+
+        private void enableComponents()
+        {
+            LoginBtn.IsEnabled = true;
+            LicenseTextbox.IsEnabled = true;
+            PasswordBox.IsEnabled = true;
+        }
+
         private async void OnLoginClicked(object sender, RoutedEventArgs e)
         {
-            if (await _viewModel.Login())
+            disableComponents();
+
+            _viewModel.License = LicenseTextbox.Text;
+            _viewModel.Password = PasswordBox.Password;
+            ErrorTextBlock.Visibility = Visibility.Hidden;
+
+            bool success = await _viewModel.Login();
+
+            if (success)
             {
-                // Login successful, call the onLoginSuccess action (passed in from outside)
+                // TODO: SAVE TOKEN
                 _onLoginSuccess();
             }
             else
             {
-                // Show error message to the user
-                MessageBox.Show("Login failed!");
+                ErrorTextBlock.Text = _viewModel.ErrorMessage;
+                ErrorTextBlock.Visibility = Visibility.Visible;
+                enableComponents();
             }
         }
     }

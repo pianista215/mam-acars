@@ -1,24 +1,43 @@
-﻿using System;
+﻿using MamAcars.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MamAcars.ViewModels
 {
     public class LoginViewModel
     {
-        public string Username { get; set; }
+        public string License { get; set; }
         public string Password { get; set; }
+
+        public string ErrorMessage { get; set; }
+        public bool IsErrorVisible { get; private set; }
+
+        private readonly ApiService _apiService;
+        public LoginViewModel()
+        {
+            _apiService = new ApiService();
+        }
 
         public async Task<bool> Login()
         {
-            // Implement login logic here
-            // Call the REST API using HttpClient and process the response
-            // ...
+            var response = await _apiService.LoginAsync(License, Password);
 
-            // Return true if login is successful, false otherwise
-            return false; // Placeholder, replace with actual logic
+            if (response.IsSuccess)
+            {
+                IsErrorVisible = false;
+                return true;
+            }
+            else
+            {
+                ErrorMessage = response.ErrorMessage ?? "Invalid credentials.";
+                IsErrorVisible = true;
+                return false;
+            }
         }
     }
 }
