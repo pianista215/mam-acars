@@ -34,7 +34,7 @@ namespace MamAcars.ViewModels
             }
             else
             {
-                ErrorMessage = response.ErrorMessage ?? "Invalid credentials.";
+                ErrorMessage = response.ErrorMessage ?? "Unexpected error. Contact your administrator.";
                 IsErrorVisible = true;
                 return false;
             }

@@ -17,7 +17,7 @@ namespace MamAcars.Services
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("http://localhost:8080/"),
+                BaseAddress = new Uri("http://localhost:8080/api/"),
                 Timeout = TimeSpan.FromSeconds(10)
             };
         }
@@ -26,10 +26,10 @@ namespace MamAcars.Services
         {
             try
             {
-                var data = new
+                var data = new LoginRequest
                 {
-                    license,
-                    password
+                    license = license,
+                    password = password
                 };
 
                 var json = JsonSerializer.Serialize(data);
@@ -41,14 +41,30 @@ namespace MamAcars.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<LoginResponse>(responseContent) ?? new LoginResponse { IsSuccess = false };
+                    var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent);
+
+                    if(loginResponse != null)
+                    {
+                        loginResponse.IsSuccess = true;
+                        return loginResponse;
+                    } else
+                    {
+                        return new LoginResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to deserialize response from server."
+                        };
+                    }
                 }
                 else
                 {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
+
                     return new LoginResponse
                     {
                         IsSuccess = false,
-                        ErrorMessage = $"Error: {response.StatusCode}"
+                        ErrorMessage = $"Server: {errorData.message}"
                     };
                 }
             }
@@ -74,10 +90,21 @@ namespace MamAcars.Services
     
     }
 
+    public class GenericErrorResponse
+    {
+        public string message { get; set; }
+    }
+
+    public class LoginRequest
+    {
+        public string license { get; set; }
+        public string password { get; set; }
+    }
+
     public class LoginResponse
     {
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
-        public string Token { get; set; }
+        public string access_token { get; set; }
     }
 }
