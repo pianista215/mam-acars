@@ -30,6 +30,7 @@ namespace MamAcars.ViewModels
             if (response.IsSuccess)
             {
                 IsErrorVisible = false;
+                TokenStorage.SaveToken(response.access_token);
                 return true;
             }
             else

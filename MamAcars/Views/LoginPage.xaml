@@ -6,7 +6,8 @@
       xmlns:local="clr-namespace:MamAcars"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
-      Title="LoginPage">
+      Title="LoginPage"
+      Loaded="OnPageLoaded">
 
 
     <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Width="300" Margin="10,10,10,10">

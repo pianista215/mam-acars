@@ -1,4 +1,5 @@
-﻿using MamAcars.ViewModels;
+﻿using MamAcars.Services;
+using MamAcars.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,26 +46,38 @@ namespace MamAcars
             PasswordBox.IsEnabled = true;
         }
 
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        {
+            // Revisa si existe un token almacenado
+            var token = TokenStorage.GetToken();
+            if (!string.IsNullOrEmpty(token))
+            {
+                _onLoginSuccess?.Invoke();
+            }
+        }
+
         private async void OnLoginClicked(object sender, RoutedEventArgs e)
         {
-            disableComponents();
-
-            _viewModel.License = LicenseTextbox.Text;
-            _viewModel.Password = PasswordBox.Password;
-            ErrorTextBlock.Visibility = Visibility.Hidden;
-
-            bool success = await _viewModel.Login();
-
-            if (success)
+            if (!string.IsNullOrWhiteSpace(LicenseTextbox.Text) && !string.IsNullOrWhiteSpace(PasswordBox.Password))
             {
-                // TODO: SAVE TOKEN
-                _onLoginSuccess();
-            }
-            else
-            {
-                ErrorTextBlock.Text = _viewModel.ErrorMessage;
-                ErrorTextBlock.Visibility = Visibility.Visible;
-                enableComponents();
+                disableComponents();
+
+                _viewModel.License = LicenseTextbox.Text;
+                _viewModel.Password = PasswordBox.Password;
+                ErrorTextBlock.Visibility = Visibility.Hidden;
+
+                bool success = await _viewModel.Login();
+
+                if (success)
+                {
+                    _onLoginSuccess();
+                }
+                else
+                {
+                    ErrorTextBlock.Text = _viewModel.ErrorMessage;
+                    ErrorTextBlock.Visibility = Visibility.Visible;
+                    enableComponents();
+                }
             }
         }
     }
