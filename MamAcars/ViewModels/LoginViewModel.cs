@@ -18,10 +18,23 @@ namespace MamAcars.ViewModels
         public bool IsErrorVisible { get; private set; }
 
         private readonly ApiService _apiService;
+
+        public event Action OnLoginSuccess;
+
         public LoginViewModel()
         {
             _apiService = new ApiService();
         }
+
+        public async Task CheckTokenAndNavigateAsync()
+        {
+            var token = TokenStorage.GetToken();
+            if (!string.IsNullOrEmpty(token))
+            {
+                OnLoginSuccess?.Invoke();
+            }
+        }
+
 
         public async Task<bool> Login()
         {

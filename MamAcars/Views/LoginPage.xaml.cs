@@ -28,6 +28,7 @@ namespace MamAcars
             InitializeComponent();
             _viewModel = new LoginViewModel();
             DataContext = _viewModel;
+            _viewModel.OnLoginSuccess += onLoginSuccess;
             _onLoginSuccess = onLoginSuccess;
         }
 
