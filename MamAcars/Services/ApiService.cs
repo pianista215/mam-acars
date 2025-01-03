@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -22,8 +23,20 @@ namespace MamAcars.Services
             };
         }
 
+        public void SetBearerToken(string token)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        private void SetDefaultHeaders()
+        {
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        }
+
         public async Task<LoginResponse> LoginAsync(string license, string password)
         {
+            SetDefaultHeaders();
             try
             {
                 var data = new LoginRequest
@@ -70,7 +83,6 @@ namespace MamAcars.Services
             }
             catch (TaskCanceledException)
             {
-                // Controla el timeout
                 return new LoginResponse
                 {
                     IsSuccess = false,
@@ -79,7 +91,6 @@ namespace MamAcars.Services
             }
             catch (Exception ex)
             {
-                // Controla cualquier otro error (e.g., deserialización fallida)
                 return new LoginResponse
                 {
                     IsSuccess = false,
@@ -87,7 +98,83 @@ namespace MamAcars.Services
                 };
             }
         }
-    
+
+        public async Task<FlightPlanInfoResponse> CurrentFlightPlanAsync()
+        {
+            SetDefaultHeaders();
+            try
+            {
+
+                var response = await _httpClient.GetAsync("v1/flight-plan/current-fpl");
+
+                // Verifica si la respuesta es exitosa
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var flightInfoResponse = JsonSerializer.Deserialize<FlightPlanInfoResponse>(responseContent);
+
+                    if (flightInfoResponse != null)
+                    {
+                        flightInfoResponse.IsSuccess = true;
+                        return flightInfoResponse;
+                    }
+                    else
+                    {
+                        return new FlightPlanInfoResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to deserialize response from server."
+                        };
+                    }
+                }
+                else
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        return new FlightPlanInfoResponse
+                        {
+                            IsSuccess = false,
+                            AuthFailure = true
+                        };
+                    } else if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        return new FlightPlanInfoResponse
+                        {
+                            IsSuccess = false,
+                            EmptyFlightPlan = true
+                        };
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
+
+                        return new FlightPlanInfoResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = $"Server: {errorData.message}"
+                        };
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                return new FlightPlanInfoResponse
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Request timed out. Please try again."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new FlightPlanInfoResponse
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
+                };
+            }
+        }
+
     }
 
     public class GenericErrorResponse
@@ -106,5 +193,26 @@ namespace MamAcars.Services
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
         public string access_token { get; set; }
+    }
+
+    public class FlightPlanInfoResponse
+    {
+        public bool IsSuccess { get; set; }
+
+        public bool AuthFailure { get; set; } = false;
+
+        public bool EmptyFlightPlan { get; set; } = false;
+
+        public string ErrorMessage { get; set; }
+
+        public ulong id { get; set; }
+        public string departure_icao { get; set; }
+        public double departure_latitude { get; set; }
+        public double departure_longitude { get; set; }
+        public string arrival_icao { get; set; }
+        public string alt1_icao { get; set; }
+        public string alt2_icao { get; set; }
+        public string aircraft_type_icao { get; set; }
+        public string aircraft_reg { get; set; }
     }
 }

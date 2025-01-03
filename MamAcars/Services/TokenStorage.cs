@@ -26,7 +26,13 @@ namespace MamAcars.Services
                 return null;
 
             var encryptedData = File.ReadAllBytes(FilePath);
-            return Encoding.UTF8.GetString(ProtectedData.Unprotect(encryptedData, null, DataProtectionScope.CurrentUser));
+            try
+            {
+                return Encoding.UTF8.GetString(ProtectedData.Unprotect(encryptedData, null, DataProtectionScope.CurrentUser));
+            } catch
+            {
+                return null;
+            }
         }
 
         public static void DeleteToken()
