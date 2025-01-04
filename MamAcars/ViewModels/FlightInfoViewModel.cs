@@ -14,12 +14,14 @@ namespace MamAcars.ViewModels
     public class FlightInfoViewModel : INotifyPropertyChanged
     {
         private readonly ApiService _apiService;
+        private readonly FsuipcService _fsuipcService;
         private string _departureAirport;
         private string _arrivalAirport;
         private string _alternateAirports;
         private string _aircraftDetails;
         private string _errorMessage;
         private string _startFlightBtnText = "Start Flight";
+        private bool _startFlightBtnEnabled = false;
         private Visibility _errorVisibility = Visibility.Collapsed;
         private Visibility _flightInfoVisibility = Visibility.Collapsed;
 
@@ -32,6 +34,10 @@ namespace MamAcars.ViewModels
         public FlightInfoViewModel()
         {
             _apiService = new ApiService();
+            _fsuipcService = new FsuipcService();
+            _fsuipcService.SimStatusChanged += OnSimStatusChanged;
+            _fsuipcService.AircraftLocationChanged += OnAircraftLocationChanged;
+
             // TODO: THINK ABOUT TOKEN SET
             _apiService.SetBearerToken(TokenStorage.GetToken());
         }
@@ -72,6 +78,12 @@ namespace MamAcars.ViewModels
             set => SetProperty(ref _startFlightBtnText, value);
         }
 
+        public bool StartFlightBtnEnabled
+        {
+            get => _startFlightBtnEnabled;
+            set => SetProperty(ref _startFlightBtnEnabled, value);
+        }
+
         public Visibility ErrorVisibility
         {
             get => _errorVisibility;
@@ -82,6 +94,33 @@ namespace MamAcars.ViewModels
         {
             get => _flightInfoVisibility;
             set => SetProperty(ref _flightInfoVisibility, value);
+        }
+
+        private void OnSimStatusChanged(bool isSimConnected)
+        {
+            if (isSimConnected)
+            {
+                StartFlightBtnText = $"Waiting aircraft to be in {_departureAirport}";
+                StartFlightBtnEnabled = false;
+            } else
+            {
+                StartFlightBtnText = "Detecting simulator";
+                StartFlightBtnEnabled = false;
+            }
+        }
+
+        private void OnAircraftLocationChanged(bool isAircraftAtStartLocation)
+        {
+            if (isAircraftAtStartLocation)
+            {
+                StartFlightBtnText = "Start Flight";
+                StartFlightBtnEnabled = true;
+            }
+            else
+            {
+                StartFlightBtnText = $"Waiting aircraft to be in {_departureAirport}";
+                StartFlightBtnEnabled = false;
+            }
         }
 
         public async Task LoadFlightInfoAsync()
@@ -98,12 +137,15 @@ namespace MamAcars.ViewModels
                 {
                     if (flightInfo.IsSuccess)
                     {
-                            DepartureAirport = flightInfo.departure_icao;
-                            ArrivalAirport = flightInfo.arrival_icao;
-                            AlternateAirports = string.IsNullOrEmpty(flightInfo.alt2_icao) ? flightInfo.alt1_icao : $"{flightInfo.alt1_icao}, {flightInfo.alt2_icao}";
-                            AircraftDetails = $"{flightInfo.aircraft_type_icao} ({flightInfo.aircraft_reg})";
-                            FlightInfoVisibility = Visibility.Visible;
-                            ErrorVisibility = Visibility.Collapsed;
+                        DepartureAirport = flightInfo.departure_icao;
+                        ArrivalAirport = flightInfo.arrival_icao;
+                        AlternateAirports = string.IsNullOrEmpty(flightInfo.alt2_icao) ? flightInfo.alt1_icao : $"{flightInfo.alt1_icao}, {flightInfo.alt2_icao}";
+                        AircraftDetails = $"{flightInfo.aircraft_type_icao} ({flightInfo.aircraft_reg})";
+                        FlightInfoVisibility = Visibility.Visible;
+                        ErrorVisibility = Visibility.Collapsed;
+                        StartFlightBtnText = "Detecting simulator";
+                        StartFlightBtnEnabled = false;
+                        _fsuipcService.startMonitoring(flightInfo.departure_latitude, flightInfo.departure_longitude);
                     } else
                     {
                         if (flightInfo.AuthFailure)
@@ -112,16 +154,19 @@ namespace MamAcars.ViewModels
                             ShowErrorMessage("There was a problem with your credentials, please login again");
                             AuthFailure = true;
                             StartFlightBtnText = "Relogin";
+                            StartFlightBtnEnabled = true;
                         } else if (flightInfo.EmptyFlightPlan)
                         {
                             ShowErrorMessage("It appears you haven't submitted a flight plan. Please send one and try again.");
                             CloseOnClick = true;
                             StartFlightBtnText = "Close";
+                            StartFlightBtnEnabled = true;
                         } else
                         {
                             ShowErrorMessage(flightInfo.ErrorMessage);
                             CloseOnClick = true;
                             StartFlightBtnText = "Close";
+                            StartFlightBtnEnabled = true;
                         }
                     }
                 }

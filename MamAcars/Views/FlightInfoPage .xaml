@@ -112,6 +112,7 @@
         <!-- Start Flight Button -->
         <Button 
                 Content="{Binding StartFlightBtnText}" 
+                IsEnabled="{Binding StartFlightBtnEnabled}"
                 FontSize="18" 
                 Click="OnStartFlight" 
                 HorizontalAlignment="Center" 
