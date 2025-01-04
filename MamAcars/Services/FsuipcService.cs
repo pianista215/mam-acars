@@ -1,4 +1,5 @@
 ﻿using FSUIPC;
+using MamAcars.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,10 +85,14 @@ namespace MamAcars.Services
                 longitude = longitudeOffset.Value;
                 latitude = latitudeOffset.Value;
 
-                var longitude_diff = Math.Abs(longitude.DecimalDegrees - expectedLocation.AirportLongitude);
-                var latitude_diff = Math.Abs(latitude.DecimalDegrees - expectedLocation.AirportLatitude);
+                var distance = MamUtils.CalculateDistance(
+                    latitude.DecimalDegrees,
+                    longitude.DecimalDegrees,
+                    expectedLocation.AirportLatitude,
+                    expectedLocation.AirportLongitude
+                    );
 
-                if(longitude_diff <1 && latitude_diff < 1)
+                if(distance <= 5.0) // 5km of radius from the airport
                 {
                     newStatus = true;
                 } else
