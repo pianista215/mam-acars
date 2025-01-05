@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MamAcars.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,15 +19,19 @@ namespace MamAcars
     public partial class FlightRecordingPage : Page
     {
         private Action _onEndFlight;
+        private readonly FlightRecordingViewModel _viewModel;
 
         public FlightRecordingPage(Action onEndFlight)
         {
             InitializeComponent();
+            _viewModel = new FlightRecordingViewModel();
+            DataContext = _viewModel;
             _onEndFlight = onEndFlight;
         }
 
         private void OnEndFlightClicked(object sender, RoutedEventArgs e)
         {
+            _viewModel.StopTimer();
             _onEndFlight();
         }
     }

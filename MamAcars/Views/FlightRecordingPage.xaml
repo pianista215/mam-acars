@@ -8,8 +8,42 @@
       d:DesignHeight="450" d:DesignWidth="800"
       Title="FlightRecordingPage">
 
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-        <TextBlock Name="RecordingStatus" Text="Flight Recording in Progress..." FontSize="20" Margin="10"/>
-        <Button Name="EndFlightButton" Content="End Flight" Width="200" Margin="10" Click="OnEndFlightClicked"/>
-    </StackPanel>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Flight Recording Status -->
+            <RowDefinition Height="*"/>
+            <!-- Flight Time -->
+            <RowDefinition Height="Auto"/>
+            <!-- End Flight Button -->
+        </Grid.RowDefinitions>
+
+        <!-- Flight Recording Status -->
+        <TextBlock Name="RecordingStatus" 
+               Text="Flight Recording in Progress..." 
+               FontSize="20" 
+               HorizontalAlignment="Center" 
+               VerticalAlignment="Center" 
+               Grid.Row="0"/>
+
+        <!-- Flight Time -->
+        <TextBlock Name="FlightTime" 
+               Text="{Binding ElapsedTime}" 
+               FontSize="30" 
+               HorizontalAlignment="Center" 
+               VerticalAlignment="Center" 
+               Grid.Row="1" 
+               Margin="0,40,0,0"/>
+
+        <!-- End Flight Button -->
+        <Button Name="EndFlightButton" 
+            Content="End Flight" 
+            FontSize="18" 
+            Width="200" 
+            HorizontalAlignment="Center" 
+            Padding="10"
+            Margin="0,20,0,0" 
+            Grid.Row="2" 
+            Click="OnEndFlightClicked"/>
+    </Grid>
 </Page>

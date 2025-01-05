@@ -145,7 +145,8 @@ namespace MamAcars.ViewModels
                         ErrorVisibility = Visibility.Collapsed;
                         StartFlightBtnText = "Detecting simulator";
                         StartFlightBtnEnabled = false;
-                        _fsuipcService.startMonitoring(flightInfo.departure_latitude, flightInfo.departure_longitude);
+
+                        _fsuipcService.startLookingSimulatorAndAircraftLocation(flightInfo.departure_latitude, flightInfo.departure_longitude);
                     } else
                     {
                         if (flightInfo.AuthFailure)

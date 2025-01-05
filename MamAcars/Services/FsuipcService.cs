@@ -2,6 +2,7 @@
 using MamAcars.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -35,11 +36,11 @@ namespace MamAcars.Services
 
         private Offset<FsLongitude> longitudeOffset = new Offset<FsLongitude>("Basic", 0x0568, 8);
         private Offset<FsLatitude> latitudeOffset = new Offset<FsLatitude>("Basic", 0x0560, 8);
+        private Offset<ushort> onGroundOffset = new Offset<ushort>("Basic", 0x0366);
+        private Offset<long> altitudeOffset = new Offset<long>("Basic", 0x0570);
 
-        private FsLatitude latitude;
-        private FsLongitude longitude;
 
-        public void startMonitoring(double airportLatitude, double airportLongitude)
+        public void startLookingSimulatorAndAircraftLocation(double airportLatitude, double airportLongitude)
         {
             var state = new ExpectedLocation
             {
@@ -48,6 +49,11 @@ namespace MamAcars.Services
             };
 
             _timer = new Timer(CheckSimulator, state, 0, 2000);
+        }
+
+        public void stopLookingSimulatorAndAircraftLocation()
+        {
+            _timer?.Dispose();
         }
 
         public void CheckSimulator(object state)
@@ -72,7 +78,7 @@ namespace MamAcars.Services
                 newState = true;
             }
 
-            if(newState != _simConnected)
+            if (newState != _simConnected)
             {
                 _simConnected = newState;
                 SimStatusChanged?.Invoke(_simConnected);
@@ -91,8 +97,8 @@ namespace MamAcars.Services
             try
             {
                 FSUIPCConnection.Process("Basic");
-                longitude = longitudeOffset.Value;
-                latitude = latitudeOffset.Value;
+                var longitude = longitudeOffset.Value;
+                var latitude = latitudeOffset.Value;
 
                 var distance = MamUtils.CalculateDistance(
                     latitude.DecimalDegrees,
@@ -101,7 +107,7 @@ namespace MamAcars.Services
                     expectedLocation.AirportLongitude
                     );
 
-                if(distance <= 8.0) // 8 km of radius from the airport
+                if (distance <= 8.0) // 8 km of radius from the airport
                 {
                     newStatus = true;
                 } else
@@ -125,5 +131,45 @@ namespace MamAcars.Services
             public double AirportLatitude { get; set; }
             public double AirportLongitude { get; set; }
         }
+
+        public class BlackBoxBasicInformation
+        {
+            public double Latitude { get; set; }
+            public double Longitude { get; set; }
+
+            public bool onGround { get; set; }
+
+            public int Altitude { get; set; }
+        }
+
+        public void startSavingBlackBox()
+        {
+            _timer = new Timer(SaveBlackBoxData, null, 0, 2000);
+        }
+
+        private BlackBoxBasicInformation lastBlackBoxState;
+
+        public void SaveBlackBoxData(object state)
+        {
+            try
+            {
+                FSUIPCConnection.Process("Basic");
+
+                BlackBoxBasicInformation blackBoxBasicInformation = new BlackBoxBasicInformation();
+                blackBoxBasicInformation.Longitude = longitudeOffset.Value.DecimalDegrees;
+                blackBoxBasicInformation.Latitude = latitudeOffset.Value.DecimalDegrees;
+                blackBoxBasicInformation.onGround = onGroundOffset.Value > 0;
+                blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * 3.28084 / (65536.0 * 65536.0));
+
+                Debug.WriteLine($"lat: {blackBoxBasicInformation.Latitude} lon: {blackBoxBasicInformation.Longitude} ground: {blackBoxBasicInformation.onGround} altitude: {blackBoxBasicInformation.Altitude}");
+                lastBlackBoxState = blackBoxBasicInformation;
+            } catch
+            {
+                // TODO: THINK
+            }
+        }
+
+
+
     }
 }
