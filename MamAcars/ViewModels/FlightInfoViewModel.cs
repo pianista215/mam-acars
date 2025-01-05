@@ -34,7 +34,7 @@ namespace MamAcars.ViewModels
         public FlightInfoViewModel()
         {
             _apiService = ApiService.Instance;
-            _fsuipcService = new FsuipcService();
+            _fsuipcService = FsuipcService.Instance;
             _fsuipcService.SimStatusChanged += OnSimStatusChanged;
             _fsuipcService.AircraftLocationChanged += OnAircraftLocationChanged;
 

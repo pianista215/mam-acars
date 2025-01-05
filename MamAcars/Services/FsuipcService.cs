@@ -12,6 +12,15 @@ namespace MamAcars.Services
     public class FsuipcService
     {
 
+        private static readonly Lazy<FsuipcService> _instance = new Lazy<FsuipcService>(() => new FsuipcService());
+
+        public static FsuipcService Instance => _instance.Value;
+
+        private FsuipcService()
+        {
+
+        }
+
         private Timer _timer;
         private bool _simConnected = false;
         private bool _planeOnAirport = false;
