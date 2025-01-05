@@ -23,7 +23,7 @@ namespace MamAcars.ViewModels
 
         public LoginViewModel()
         {
-            _apiService = new ApiService();
+            _apiService = ApiService.Instance;
         }
 
         public async Task CheckTokenAndNavigateAsync()
