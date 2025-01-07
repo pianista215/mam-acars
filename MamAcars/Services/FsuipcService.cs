@@ -17,9 +17,11 @@ namespace MamAcars.Services
 
         public static FsuipcService Instance => _instance.Value;
 
+        private FlightEventStorage _storage;
+
         private FsuipcService()
         {
-
+            _storage = new FlightEventStorage(); 
         }
 
         private Timer _timer;
@@ -132,22 +134,16 @@ namespace MamAcars.Services
             public double AirportLongitude { get; set; }
         }
 
-        public class BlackBoxBasicInformation
-        {
-            public double Latitude { get; set; }
-            public double Longitude { get; set; }
-
-            public bool onGround { get; set; }
-
-            public int Altitude { get; set; }
-        }
-
         public void startSavingBlackBox()
         {
+            _storage.RegisterFlight("retrieved_flight_id", "xplane_aircraft_xxx");
             _timer = new Timer(SaveBlackBoxData, null, 0, 2000);
         }
 
-        private BlackBoxBasicInformation lastBlackBoxState;
+        private double RoundToDecimals(double value, int decimals)
+        {
+            return Math.Round(value, decimals);
+        }
 
         public void SaveBlackBoxData(object state)
         {
@@ -156,13 +152,14 @@ namespace MamAcars.Services
                 FSUIPCConnection.Process("Basic");
 
                 BlackBoxBasicInformation blackBoxBasicInformation = new BlackBoxBasicInformation();
-                blackBoxBasicInformation.Longitude = longitudeOffset.Value.DecimalDegrees;
-                blackBoxBasicInformation.Latitude = latitudeOffset.Value.DecimalDegrees;
+                blackBoxBasicInformation.Longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5);
+                blackBoxBasicInformation.Latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5);
                 blackBoxBasicInformation.onGround = onGroundOffset.Value > 0;
                 blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * 3.28084 / (65536.0 * 65536.0));
 
                 Debug.WriteLine($"lat: {blackBoxBasicInformation.Latitude} lon: {blackBoxBasicInformation.Longitude} ground: {blackBoxBasicInformation.onGround} altitude: {blackBoxBasicInformation.Altitude}");
-                lastBlackBoxState = blackBoxBasicInformation;
+
+                _storage.RecordEvent("retrieved_flight_id", blackBoxBasicInformation);
             } catch
             {
                 // TODO: THINK

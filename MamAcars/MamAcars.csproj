@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="FSUIPCClientDLL" Version="3.3.13" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
   </ItemGroup>
 
 </Project>
