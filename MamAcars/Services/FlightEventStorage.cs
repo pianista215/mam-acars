@@ -48,6 +48,7 @@ namespace MamAcars.Services
             string createFlightsTable = @"CREATE TABLE IF NOT EXISTS flights (
             id TEXT PRIMARY KEY,
             aircraft TEXT NOT NULL,
+            pilot_comment TEXT,
             start_time DATETIME NOT NULL
         );";
 
@@ -91,6 +92,19 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
 
             _previousState = null; // Reset the state for a new flight
+        }
+
+        public void SetComment(string flightId, string comment)
+        {
+            var startTime = DateTime.UtcNow;
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"UPDATE flights SET pilot_comment=@pilot_comment WHERE id=@id;";
+            command.Parameters.AddWithValue("@id", flightId);
+            command.Parameters.AddWithValue("@pilot_comment", comment);
+            command.ExecuteNonQuery();
         }
 
         public void RecordEvent(string flightId, BlackBoxBasicInformation currentState)
@@ -139,20 +153,57 @@ namespace MamAcars.Services
         {
             var changes = new List<KeyValuePair<string, object>>();
 
-            if (previous == null || previous.Latitude != current.Latitude)
-                changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
-
-            if (previous == null || previous.Longitude != current.Longitude)
-                changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
+            // TODO: UNAI RETHINK THAT BECAUSE WE NEED TO TRY TO GET A LOT OF DATA NEAR TERRAIN, BUT LESS HIGHER
 
             if (previous == null || previous.onGround != current.onGround)
+            {
+                // If "onGround" changes, record all values
+                changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
+                changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
                 changes.Add(new KeyValuePair<string, object>("onGround", current.onGround));
-
-            if (previous == null || previous.Altitude != current.Altitude)
                 changes.Add(new KeyValuePair<string, object>("Altitude", current.Altitude));
+                changes.Add(new KeyValuePair<string, object>("AGLAltitude", current.AGLAltitude));
+                changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
+                changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
+                return changes;
+            }
+
+            if (previous == null || Math.Abs(previous.Altitude - current.Altitude) > 800)
+            {
+                if (previous == null || previous.Latitude != current.Latitude)
+                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
+
+                if (previous == null || previous.Longitude != current.Longitude)
+                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
+
+                changes.Add(new KeyValuePair<string, object>("Altitude", current.Altitude));
+            }
+
+            if (previous == null || Math.Abs(previous.Heading - current.Heading) > 30)
+            {
+                if (previous == null || previous.Latitude != current.Latitude)
+                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
+
+                if (previous == null || previous.Longitude != current.Longitude)
+                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
+
+                changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
+            }
+
+            if (previous == null || Math.Abs(previous.GroundSpeedKnots - current.GroundSpeedKnots) > 20)
+            {
+                if (previous == null || previous.Latitude != current.Latitude)
+                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
+
+                if (previous == null || previous.Longitude != current.Longitude)
+                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
+
+                changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
+            }
 
             return changes;
         }
+
 
         private void WriteBatchToDatabase()
         {
@@ -194,6 +245,18 @@ namespace MamAcars.Services
         public double Longitude { get; set; }
         public bool onGround { get; set; }
         public int Altitude { get; set; }
+
+        public int AGLAltitude { get; set; }
+
+        public int Heading { get; set; }
+
+        public int GroundSpeedKnots { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
+
+        public override string ToString()
+        {
+            return $"Latitude: {Latitude}, Longitude: {Longitude}, onGround: {onGround}, Altitude: {Altitude}, " +
+                   $"Heading: {Heading}, GroundSpeedKnots: {GroundSpeedKnots}, Timestamp: {Timestamp:O}";
+        }
     }
 }

@@ -8,9 +8,41 @@
       d:DesignHeight="450" d:DesignWidth="800"
       Title="ConfirmFlightPage">
 
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
-        <TextBlock Text="Please add a comment (optional)" Margin="10"/>
-        <TextBox Name="CommentTextBox" Width="250" Margin="10" TextWrapping="Wrap" AcceptsReturn="True" Height="100"/>
-        <Button Content="Send Flight" Width="200" Margin="10" Click="OnSendFlightClicked"/>
-    </StackPanel>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Please add a comment (optional)" 
+                   Grid.Row="0" 
+                   HorizontalAlignment="Center" 
+                   Margin="10" 
+                   FontSize="16" 
+                   FontWeight="Bold" />
+
+        <TextBox Name="CommentTextBox" 
+                 Grid.Row="1" 
+                 Width="300" 
+                 Margin="10" 
+                 TextWrapping="Wrap" 
+                 AcceptsReturn="True" 
+                 VerticalAlignment="Top" 
+                 HorizontalAlignment="Center" 
+                 Height="150" 
+                 Text="{Binding UserComment, UpdateSourceTrigger=PropertyChanged}" />
+
+        <Button Content="Send Flight" 
+                Grid.Row="2" 
+                Width="150" 
+                Margin="10" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Top" 
+                Click="OnSendFlightClicked" />
+    </Grid>
 </Page>

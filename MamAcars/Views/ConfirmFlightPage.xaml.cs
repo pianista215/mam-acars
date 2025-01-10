@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MamAcars.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,15 +19,18 @@ namespace MamAcars
     public partial class ConfirmFlightPage : Page
     {
         private Action _onSendFlight;
+        private readonly ConfirmFlightViewModel _viewModel;
         public ConfirmFlightPage(Action onSendFlight)
         {
             InitializeComponent();
+            _viewModel = new ConfirmFlightViewModel();
+            DataContext = _viewModel;
             _onSendFlight = onSendFlight;
         }
 
         private void OnSendFlightClicked(object sender, RoutedEventArgs e)
         {
-            string comment = CommentTextBox.Text;
+            _viewModel.AddComment(CommentTextBox.Text);
             _onSendFlight();
         }
     }

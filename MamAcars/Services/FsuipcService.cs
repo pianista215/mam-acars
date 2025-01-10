@@ -1,8 +1,10 @@
 ﻿using FSUIPC;
 using MamAcars.Utils;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -36,10 +38,16 @@ namespace MamAcars.Services
 
         public event Action<bool> AircraftLocationChanged;
 
-        private Offset<FsLongitude> longitudeOffset = new Offset<FsLongitude>("Basic", 0x0568, 8);
-        private Offset<FsLatitude> latitudeOffset = new Offset<FsLatitude>("Basic", 0x0560, 8);
-        private Offset<ushort> onGroundOffset = new Offset<ushort>("Basic", 0x0366);
-        private Offset<long> altitudeOffset = new Offset<long>("Basic", 0x0570);
+        private const string BASIC_OFFSET = "Basic";
+
+        private Offset<FsLongitude> longitudeOffset = new Offset<FsLongitude>(BASIC_OFFSET, 0x0568, 8);
+        private Offset<FsLatitude> latitudeOffset = new Offset<FsLatitude>(BASIC_OFFSET, 0x0560, 8);
+        private Offset<ushort> onGroundOffset = new Offset<ushort>(BASIC_OFFSET, 0x0366);
+        private Offset<long> altitudeOffset = new Offset<long>(BASIC_OFFSET, 0x0570);
+        private Offset<int> groundAltitudeOffset = new Offset<int>(BASIC_OFFSET, 0x0020);
+        private Offset<uint> headingOffset = new Offset<uint>(BASIC_OFFSET, 0x0580);
+        private Offset<short> magneticVariationOffset = new Offset<short>(BASIC_OFFSET, 0x2A0);
+        private Offset<int> groundSpeedOffset = new Offset<int>(BASIC_OFFSET, 0x02B4);
 
 
         public void startLookingSimulatorAndAircraftLocation(double airportLatitude, double airportLongitude)
@@ -136,8 +144,14 @@ namespace MamAcars.Services
 
         public void startSavingBlackBox()
         {
+            // TODO: IDS
             _storage.RegisterFlight("retrieved_flight_id", "xplane_aircraft_xxx");
             _timer = new Timer(SaveBlackBoxData, null, 0, 2000);
+        }
+
+        public void stopSavingBlackBox()
+        {
+            _timer?.Dispose();
         }
 
         private double RoundToDecimals(double value, int decimals)
@@ -155,15 +169,31 @@ namespace MamAcars.Services
                 blackBoxBasicInformation.Longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5);
                 blackBoxBasicInformation.Latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5);
                 blackBoxBasicInformation.onGround = onGroundOffset.Value > 0;
-                blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * 3.28084 / (65536.0 * 65536.0));
+                blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0));
+                int groundAltitudeFeets = (int)((double)groundAltitudeOffset.Value / 256.0 * MamUtils.METER_TO_FEETS);
 
-                Debug.WriteLine($"lat: {blackBoxBasicInformation.Latitude} lon: {blackBoxBasicInformation.Longitude} ground: {blackBoxBasicInformation.onGround} altitude: {blackBoxBasicInformation.Altitude}");
+                blackBoxBasicInformation.AGLAltitude = blackBoxBasicInformation.Altitude - groundAltitudeFeets;
+
+                var heading = (double) headingOffset.Value * 360.0 / (65536.0 * 65536.0);
+                var magneticVariation = (double) magneticVariationOffset.Value * 360.0 / 65536.0;
+                blackBoxBasicInformation.Heading = (int) (heading - magneticVariation) % 360;
+
+                blackBoxBasicInformation.GroundSpeedKnots = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d);
+
+                Debug.WriteLine(blackBoxBasicInformation.ToString());
 
                 _storage.RecordEvent("retrieved_flight_id", blackBoxBasicInformation);
             } catch
             {
                 // TODO: THINK
             }
+        }
+
+        public void SetCommentToBlackBox(string comment)
+        {
+            // TODO: IDS
+            // TODO: BETTER IN OTHER PART OF THE CODE
+            _storage.SetComment("retrieved_flight_id", comment);
         }
 
 

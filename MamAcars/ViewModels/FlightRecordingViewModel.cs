@@ -58,6 +58,7 @@ namespace MamAcars.ViewModels
         public void StopTimer()
         {
             _timer.Stop();
+            _fsuipcService.stopSavingBlackBox();
         }
     }
 }
