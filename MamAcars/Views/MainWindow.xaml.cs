@@ -42,7 +42,12 @@ namespace MamAcars
 
         private void OnEndFlight()
         {
-            MainFrame.Navigate(new ConfirmFlightPage(OnSendFlight));
+            MainFrame.Navigate(new ConfirmFlightPage(OnSubmitFlight));
+        }
+
+        private void OnSubmitFlight()
+        {
+            MainFrame.Navigate(new FlightSubmissionPage(OnSendFlight));
         }
 
         private void OnSendFlight()

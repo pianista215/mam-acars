@@ -1,4 +1,5 @@
 ﻿using FSUIPC;
+using MamAcars.Models;
 using MamAcars.Utils;
 using Microsoft.VisualBasic;
 using System;
@@ -194,9 +195,24 @@ namespace MamAcars.Services
             // TODO: IDS
             // TODO: BETTER IN OTHER PART OF THE CODE
             _storage.SetComment("retrieved_flight_id", comment);
+            
         }
 
+        public async Task ExportFlightToJson()
+        {
+            // TODO: MOVE TO OTHER PARTS
+            // TODO: THINK IF THE DESIGN OF CLASSES IS THE BEST WE CAN ACHIEVE
+            // TODO: IDS
+            _storage.ExportCurrentFlightToJson("retrieved_flight_id");
+        }
 
+        public async Task<Dictionary<int, string>> SplitBlackBoxData()
+        {
+            // TODO: MOVE TO OTHER PARTS
+            // TODO: THINK IF THE DESIGN OF CLASSES IS THE BEST WE CAN ACHIEVE
+            // TODO: IDS
+            return await _storage.SplitBlackBoxData("retrieved_flight_id");
+        }
 
     }
 }

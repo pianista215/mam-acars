@@ -31,6 +31,8 @@ namespace MamAcars.ViewModels
             var token = TokenStorage.GetToken();
             if (!string.IsNullOrEmpty(token))
             {
+                // TODO: UNAI: IF TOKEN IS CORRECT AND WE HAVE A PENDING TO SEND FLIGHT, ASK TO THE USER
+                // TODO: CHECK IF FOLDER ALREADY EXISTS TO DELETE IT... ETC
                 OnLoginSuccess?.Invoke();
             }
         }

@@ -1,9 +1,13 @@
-﻿using System;
+﻿using MamAcars.Models;
+using MamAcars.Utils;
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -21,6 +25,21 @@ namespace MamAcars.Services
 
         private static readonly string FilePath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "sqlite.dat");
+
+        private static readonly string FlightsPath =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "flights");
+
+        private string GetFlightJsonFilePath(string flightId)
+        {
+            Directory.CreateDirectory(FlightsPath!);
+            return Path.Combine(FlightsPath, $"{flightId}.json");
+        }
+
+        private string GetFlightGzipFilePath(string flightId)
+        {
+            Directory.CreateDirectory(FlightsPath!);
+            return Path.Combine(FlightsPath, $"{flightId}.gz");
+        }
 
 
         public FlightEventStorage()
@@ -211,6 +230,7 @@ namespace MamAcars.Services
             {
                 if (!_eventBuffer.Any()) return;
 
+                // TODO: REUSE CONNECTION AND DON'T INSTANTIATE ONE EACH TIME
                 using var connection = new SQLiteConnection(_connectionString);
                 connection.Open();
 
@@ -232,31 +252,109 @@ namespace MamAcars.Services
             }
         }
 
+        public void ExportCurrentFlightToJson(string flightId)
+        {
+            var json = GenerateJson(flightId);
+            var jsonFilePath = GetFlightJsonFilePath(flightId);
+            var gzipFilePath = GetFlightGzipFilePath(flightId);
+            FileHandler.WriteToFile(jsonFilePath, json);
+            FileHandler.CompressFile(jsonFilePath, gzipFilePath);
+        }
+
+        public async Task<Dictionary<int, string>> SplitBlackBoxData(string flightId)
+        {
+            var gzipFilePath = GetFlightGzipFilePath(flightId);
+            var outputPath = Path.Combine(FlightsPath, flightId);
+            Directory.CreateDirectory(outputPath!);
+
+            var chunks = await FileSplitter.SplitFileAsync(gzipFilePath, outputPath);
+
+            var chunkMd5Hashes = new Dictionary<int, string>();
+
+            foreach (var chunkFile in chunks)
+            {
+                string md5 = FileHandler.GenerateMd5(chunkFile);
+                string fileName = Path.GetFileNameWithoutExtension(chunkFile); // "chunk_0001"
+                if (int.TryParse(fileName.Split('_')[1], out int chunkId))
+                { 
+                    chunkMd5Hashes[chunkId] = md5;
+                    Debug.WriteLine($"Chunk ID: {chunkId}, MD5: {md5}");
+                } else
+                {
+                    Debug.WriteLine($"Warning: Could not parse chunk ID from file {chunkFile}");
+                }
+            }
+
+            return chunkMd5Hashes;
+        }
+
+        private string GenerateJson(string flightId)
+        {
+            var flightData = new FlightData
+            {
+                FlightId = flightId,
+                Events = new List<FlightEvent>()
+            };
+
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            // Query flight metadata
+            using var metadataCommand = connection.CreateCommand();
+            metadataCommand.CommandText = "SELECT pilot_comment, aircraft FROM flights WHERE id = @flight_id";
+            metadataCommand.Parameters.AddWithValue("@flight_id", flightId);
+
+            using var metadataReader = metadataCommand.ExecuteReader();
+            if (metadataReader.Read())
+            {
+                flightData.PilotComments = metadataReader.GetString(0);
+                flightData.Aircraft = metadataReader.GetString(1);
+            }
+
+            // Query events
+            using var eventCommand = connection.CreateCommand();
+            eventCommand.CommandText = "SELECT id, timestamp FROM events WHERE flight_id = @flight_id";
+            eventCommand.Parameters.AddWithValue("@flight_id", flightId);
+
+            using var eventReader = eventCommand.ExecuteReader();
+            while (eventReader.Read())
+            {
+                var eventId = eventReader.GetInt64(0);
+                var timestamp = eventReader.GetDateTime(1);
+
+                var changes = new Dictionary<string, object>();
+
+                // Query changes for this event
+                using var changeCommand = connection.CreateCommand();
+                changeCommand.CommandText = "SELECT variable, value FROM changes WHERE event_id = @event_id";
+                changeCommand.Parameters.AddWithValue("@event_id", eventId);
+
+                using var changeReader = changeCommand.ExecuteReader();
+                while (changeReader.Read())
+                {
+                    var variable = changeReader.GetString(0);
+                    var value = changeReader.GetValue(1); // Handles different data types
+                    changes[variable] = value;
+                }
+
+                flightData.Events.Add(new FlightEvent
+                {
+                    Timestamp = timestamp,
+                    Changes = changes
+                });
+            }
+
+            // Serialize to JSON
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            return JsonSerializer.Serialize(flightData, options);
+        }
+
+
+
         public void Dispose()
         {
             _batchWriteTimer.Stop();
             WriteBatchToDatabase();
-        }
-    }
-
-    public class BlackBoxBasicInformation
-    {
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public bool onGround { get; set; }
-        public int Altitude { get; set; }
-
-        public int AGLAltitude { get; set; }
-
-        public int Heading { get; set; }
-
-        public int GroundSpeedKnots { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-
-        public override string ToString()
-        {
-            return $"Latitude: {Latitude}, Longitude: {Longitude}, onGround: {onGround}, Altitude: {Altitude}, " +
-                   $"Heading: {Heading}, GroundSpeedKnots: {GroundSpeedKnots}, Timestamp: {Timestamp:O}";
         }
     }
 }
