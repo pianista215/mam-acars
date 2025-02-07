@@ -15,7 +15,7 @@ namespace MamAcars.ViewModels
         private string _statusMessage;
         private readonly Dispatcher _dispatcher;
 
-        private readonly FsuipcService _fsuipcService;
+        private readonly FlightContextService _contextService;
 
         private Dictionary<int, string> _chunks = new();
 
@@ -46,7 +46,7 @@ namespace MamAcars.ViewModels
         public FlightSubmissionViewModel()
         {
             _dispatcher = Dispatcher.CurrentDispatcher;
-            _fsuipcService = FsuipcService.Instance;
+            _contextService = FlightContextService.Instance;
             StatusMessage = "Starting submission...";
             Progress = 0;
         }
@@ -83,31 +83,31 @@ namespace MamAcars.ViewModels
         private async Task ExportBlackBox()
         {
             StatusMessage = "Exporting events to blackbox file...";
-            await _fsuipcService.ExportFlightToJson();
+            await _contextService.ExportFlightToJson();
         }
 
         private async Task SplitBlackBox()
         {
             StatusMessage = "Splitting blackbox in pieces...";
-            _chunks = await _fsuipcService.SplitBlackBoxData();
+            _chunks = await _contextService.SplitBlackBoxData();
         }
 
         private async Task SendBasicInfo()
         {
             StatusMessage = "Sending basic information...";
-            await _fsuipcService.SendBasicInformation();
+            await _contextService.SendBasicInformation();
         }
 
         private async Task UploadChunk(int i, int totalChunks)
         {
             StatusMessage = $"Uploading black box file {i} of {totalChunks}...";
-            await _fsuipcService.SendChunkId(i);
+            await _contextService.SendChunkId(i);
         }
 
         private async Task CleanUp()
         {
             StatusMessage = "Cleaning up...";
-            await _fsuipcService.CleanData();
+            await _contextService.CleanData();
         }
 
         protected virtual void OnPropertyChanged(string propertyName)

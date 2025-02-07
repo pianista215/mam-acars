@@ -49,9 +49,7 @@ namespace MamAcars
 
         private void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            // Revisa si existe un token almacenado
-            var token = TokenStorage.GetToken();
-            if (!string.IsNullOrEmpty(token))
+            if (_viewModel.existsPreviousLoginToken())
             {
                 _onLoginSuccess?.Invoke();
             }

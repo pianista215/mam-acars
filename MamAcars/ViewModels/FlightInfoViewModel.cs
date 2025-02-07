@@ -13,8 +13,7 @@ namespace MamAcars.ViewModels
 {
     public class FlightInfoViewModel : INotifyPropertyChanged
     {
-        private readonly ApiService _apiService;
-        private readonly FsuipcService _fsuipcService;
+        private readonly FlightContextService _contextService;
         private string _departureAirport;
         private string _arrivalAirport;
         private string _alternateAirports;
@@ -33,13 +32,7 @@ namespace MamAcars.ViewModels
 
         public FlightInfoViewModel()
         {
-            _apiService = ApiService.Instance;
-            _fsuipcService = FsuipcService.Instance;
-            _fsuipcService.SimStatusChanged += OnSimStatusChanged;
-            _fsuipcService.AircraftLocationChanged += OnAircraftLocationChanged;
-
-            // TODO: THINK ABOUT TOKEN SET
-            _apiService.SetBearerToken(TokenStorage.GetToken());
+            _contextService = FlightContextService.Instance;
         }
 
         public string DepartureAirport
@@ -127,7 +120,7 @@ namespace MamAcars.ViewModels
         {
             try
             {
-                var flightInfo = await _apiService.CurrentFlightPlanAsync();
+                var flightInfo = await _contextService.LoadCurrentFlightPlan();
 
                 if (flightInfo == null)
                 {
@@ -146,12 +139,11 @@ namespace MamAcars.ViewModels
                         StartFlightBtnText = "Detecting simulator";
                         StartFlightBtnEnabled = false;
 
-                        _fsuipcService.startLookingSimulatorAndAircraftLocation(flightInfo.departure_latitude, flightInfo.departure_longitude);
+                        _contextService.startMonitoringSimulator(OnSimStatusChanged, OnAircraftLocationChanged);
                     } else
                     {
                         if (flightInfo.AuthFailure)
                         {
-                            TokenStorage.DeleteToken();
                             ShowErrorMessage("There was a problem with your credentials, please login again");
                             AuthFailure = true;
                             StartFlightBtnText = "Relogin";

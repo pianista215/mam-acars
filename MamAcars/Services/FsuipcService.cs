@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,15 +17,11 @@ namespace MamAcars.Services
     public class FsuipcService
     {
 
-        private static readonly Lazy<FsuipcService> _instance = new Lazy<FsuipcService>(() => new FsuipcService());
-
-        public static FsuipcService Instance => _instance.Value;
-
         private FlightEventStorage _storage;
 
-        private FsuipcService()
+        public FsuipcService(FlightEventStorage storage)
         {
-            _storage = new FlightEventStorage(); 
+            _storage = storage; 
         }
 
         private Timer _timer;
@@ -143,11 +140,10 @@ namespace MamAcars.Services
             public double AirportLongitude { get; set; }
         }
 
-        public void startSavingBlackBox()
+        public void startSavingBlackBox(ulong flightPlanId)
         {
-            // TODO: IDS
-            _storage.RegisterFlight("retrieved_flight_id", "xplane_aircraft_xxx");
-            _timer = new Timer(SaveBlackBoxData, null, 0, 2000);
+            _storage.RegisterFlight(flightPlanId, "xplane_aircraft_xxx");
+            _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
         }
 
         public void stopSavingBlackBox()
@@ -183,35 +179,13 @@ namespace MamAcars.Services
 
                 Debug.WriteLine(blackBoxBasicInformation.ToString());
 
-                _storage.RecordEvent("retrieved_flight_id", blackBoxBasicInformation);
+                var flightId = state as ulong?;
+
+                _storage.RecordEvent(flightId, blackBoxBasicInformation);
             } catch
             {
                 // TODO: THINK
             }
-        }
-
-        public void SetCommentToBlackBox(string comment)
-        {
-            // TODO: IDS
-            // TODO: BETTER IN OTHER PART OF THE CODE
-            _storage.SetComment("retrieved_flight_id", comment);
-            
-        }
-
-        public async Task ExportFlightToJson()
-        {
-            // TODO: MOVE TO OTHER PARTS
-            // TODO: THINK IF THE DESIGN OF CLASSES IS THE BEST WE CAN ACHIEVE
-            // TODO: IDS
-            _storage.ExportCurrentFlightToJson("retrieved_flight_id");
-        }
-
-        public async Task<Dictionary<int, string>> SplitBlackBoxData()
-        {
-            // TODO: MOVE TO OTHER PARTS
-            // TODO: THINK IF THE DESIGN OF CLASSES IS THE BEST WE CAN ACHIEVE
-            // TODO: IDS
-            return await _storage.SplitBlackBoxData("retrieved_flight_id");
         }
 
     }

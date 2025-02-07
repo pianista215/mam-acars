@@ -17,35 +17,27 @@ namespace MamAcars.ViewModels
         public string ErrorMessage { get; set; }
         public bool IsErrorVisible { get; private set; }
 
-        private readonly ApiService _apiService;
+        private readonly FlightContextService _contextService;
 
         public event Action OnLoginSuccess;
 
         public LoginViewModel()
         {
-            _apiService = ApiService.Instance;
+            _contextService = FlightContextService.Instance;
         }
 
-        public async Task CheckTokenAndNavigateAsync()
+        public Boolean existsPreviousLoginToken()
         {
-            var token = TokenStorage.GetToken();
-            if (!string.IsNullOrEmpty(token))
-            {
-                // TODO: UNAI: IF TOKEN IS CORRECT AND WE HAVE A PENDING TO SEND FLIGHT, ASK TO THE USER
-                // TODO: CHECK IF FOLDER ALREADY EXISTS TO DELETE IT... ETC
-                OnLoginSuccess?.Invoke();
-            }
+            return _contextService.existStoredCredentials();
         }
-
 
         public async Task<bool> Login()
         {
-            var response = await _apiService.LoginAsync(License, Password);
+            var response = await _contextService.Login(License, Password);
 
             if (response.IsSuccess)
             {
                 IsErrorVisible = false;
-                TokenStorage.SaveToken(response.access_token);
                 return true;
             }
             else

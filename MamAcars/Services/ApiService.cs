@@ -13,13 +13,9 @@ namespace MamAcars.Services
 {
     public class ApiService
     {
-        private static readonly Lazy<ApiService> _instance = new Lazy<ApiService>(() => new ApiService());
-
-        public static ApiService Instance => _instance.Value;
-
         private readonly HttpClient _httpClient;
 
-        private ApiService()
+        public ApiService()
         {
             _httpClient = new HttpClient
             {

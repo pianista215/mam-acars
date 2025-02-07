@@ -18,7 +18,7 @@ namespace MamAcars.ViewModels
         private Stopwatch stopWatch;
         private string _elapsedTime = "00:00:00";
 
-        private readonly FsuipcService _fsuipcService;
+        private readonly FlightContextService _contextService;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -45,8 +45,8 @@ namespace MamAcars.ViewModels
             _timer.Interval = new TimeSpan(0, 0, 0, 0, 1);
             stopWatch.Start();
             _timer.Start();
-            _fsuipcService = FsuipcService.Instance;
-            _fsuipcService.startSavingBlackBox();
+            _contextService = FlightContextService.Instance;
+            _contextService.startSavingBlackBox();
         }
 
         private void OnDispatcherTimerTick(object sender, EventArgs e)
@@ -58,7 +58,7 @@ namespace MamAcars.ViewModels
         public void StopTimer()
         {
             _timer.Stop();
-            _fsuipcService.stopSavingBlackBox();
+            _contextService.stopSavingBlackBox();
         }
     }
 }

@@ -11,16 +11,16 @@ namespace MamAcars.ViewModels
 {
     public class ConfirmFlightViewModel
     {
-        private readonly FsuipcService _fsuipcService;
+        private readonly FlightContextService _contextService;
 
         public ConfirmFlightViewModel()
         {
-            _fsuipcService = FsuipcService.Instance;
+            _contextService = FlightContextService.Instance;
         }
 
         public void AddComment(string comment)
         {
-            _fsuipcService.SetCommentToBlackBox(comment);
+            _contextService.SetCommentToBlackBox(comment);
         }
 
     }

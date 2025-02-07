@@ -29,13 +29,13 @@ namespace MamAcars.Services
         private static readonly string FlightsPath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "flights");
 
-        private string GetFlightJsonFilePath(string flightId)
+        private string GetFlightJsonFilePath(ulong flightId)
         {
             Directory.CreateDirectory(FlightsPath!);
             return Path.Combine(FlightsPath, $"{flightId}.json");
         }
 
-        private string GetFlightGzipFilePath(string flightId)
+        private string GetFlightGzipFilePath(ulong flightId)
         {
             Directory.CreateDirectory(FlightsPath!);
             return Path.Combine(FlightsPath, $"{flightId}.gz");
@@ -65,7 +65,7 @@ namespace MamAcars.Services
             connection.Open();
 
             string createFlightsTable = @"CREATE TABLE IF NOT EXISTS flights (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
             aircraft TEXT NOT NULL,
             pilot_comment TEXT,
             start_time DATETIME NOT NULL
@@ -97,7 +97,7 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
         }
 
-        public void RegisterFlight(string flightId, string aircraft)
+        public void RegisterFlight(ulong flightId, string aircraft)
         {
             var startTime = DateTime.UtcNow;
             using var connection = new SQLiteConnection(_connectionString);
@@ -113,7 +113,7 @@ namespace MamAcars.Services
             _previousState = null; // Reset the state for a new flight
         }
 
-        public void SetComment(string flightId, string comment)
+        public void SetComment(ulong flightId, string comment)
         {
             var startTime = DateTime.UtcNow;
             using var connection = new SQLiteConnection(_connectionString);
@@ -126,7 +126,7 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
         }
 
-        public void RecordEvent(string flightId, BlackBoxBasicInformation currentState)
+        public void RecordEvent(ulong? flightId, BlackBoxBasicInformation currentState)
         {
             var changes = GetChanges(_previousState, currentState);
 
@@ -252,7 +252,7 @@ namespace MamAcars.Services
             }
         }
 
-        public void ExportCurrentFlightToJson(string flightId)
+        public void ExportCurrentFlightToJson(ulong flightId)
         {
             var json = GenerateJson(flightId);
             var jsonFilePath = GetFlightJsonFilePath(flightId);
@@ -261,7 +261,7 @@ namespace MamAcars.Services
             FileHandler.CompressFile(jsonFilePath, gzipFilePath);
         }
 
-        public async Task<Dictionary<int, string>> SplitBlackBoxData(string flightId)
+        public async Task<Dictionary<int, string>> SplitBlackBoxData(ulong flightId)
         {
             var gzipFilePath = GetFlightGzipFilePath(flightId);
             var outputPath = Path.Combine(FlightsPath, flightId);
@@ -288,7 +288,7 @@ namespace MamAcars.Services
             return chunkMd5Hashes;
         }
 
-        private string GenerateJson(string flightId)
+        private string GenerateJson(ulong flightId)
         {
             var flightData = new FlightData
             {
