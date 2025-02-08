@@ -35,7 +35,7 @@
                  VerticalAlignment="Top" 
                  HorizontalAlignment="Center" 
                  Height="150" 
-                 Text="{Binding UserComment, UpdateSourceTrigger=PropertyChanged}" />
+                 />
 
         <Button Content="Send Flight" 
                 Grid.Row="2" 

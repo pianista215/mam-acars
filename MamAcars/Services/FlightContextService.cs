@@ -1,6 +1,11 @@
-﻿using System;
+﻿using FSUIPC;
+using MamAcars.Models;
+using MamAcars.Utils;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -20,6 +25,11 @@ namespace MamAcars.Services
         private readonly FsuipcService _fsuipcService;
 
         private FlightPlanInfoResponse flightPlan;
+
+        private string gzipFlightPath;
+        private List<ChunkInfo> chunks;
+
+        private ulong submittedReportId;
 
         private FlightContextService()
         {
@@ -88,13 +98,126 @@ namespace MamAcars.Services
 
         public async Task ExportFlightToJson()
         {
-            _storage.ExportCurrentFlightToJson(flightPlan.id);
+            this.gzipFlightPath = await _storage.ExportAndCompressFlightToJson(flightPlan.id);
         }
 
-        public async Task<Dictionary<int, string>> SplitBlackBoxData()
+        public async Task<int> SplitBlackBoxData()
         {
-            return await _storage.SplitBlackBoxData(flightPlan.id);
+            var chunksPaths = await SplitGzipFile();
+            this.chunks = await ComputeSha256(chunksPaths);
+            return chunks.Count;
         }
+
+        private async Task<List<string>> SplitGzipFile()
+        {
+            string parentDirectory = Path.GetDirectoryName(gzipFlightPath);
+            var outputPath = Path.Combine(parentDirectory, flightPlan.id.ToString());
+            Directory.CreateDirectory(outputPath!);
+
+            var chunks = await FileSplitter.SplitFileAsync(gzipFlightPath, outputPath);
+
+            return chunks;
+        }
+
+        private class ChunkInfo
+        {
+            public int id { get; set; }
+            public string path { get; set; }
+
+            public string sha256sum { get; set; }
+        }
+
+        private async Task<List<ChunkInfo>> ComputeSha256(List<string> chunkPaths)
+        {
+            var result = new List<ChunkInfo>();
+            for(int i = 0; i < chunkPaths.Count; i++)
+            {
+                var chunkPath = chunkPaths[i];
+
+                var chunk = new ChunkInfo();
+                chunk.id = i + 1;
+                chunk.path = chunkPath;
+                chunk.sha256sum = FileHandler.GenerateMd5(chunkPath);
+
+                result.Add(chunk);
+            }
+
+            return result;
+        }
+
+        public async Task<SubmitReportResponse> SendFlightReport()
+        {
+            var rq = new SubmitReportRequest();
+
+            rq.pilot_comments = _storage.GetComment(flightPlan.id);
+            rq.last_position_lat = _storage.GetLastLatitude(flightPlan.id);
+            rq.last_position_lon = _storage.GetLastLongitude(flightPlan.id);
+
+            var (start, end) = _storage.GetStartAndEndTime(flightPlan.id);
+
+            rq.start_time = start;
+            rq.end_time = end;
+
+            rq.chunks = new AcarsChunks[chunks.Count];
+
+            for (var i = 0; i < chunks.Count; i++)
+            {
+                var info = chunks[i];
+                var chunk = new AcarsChunks();
+                chunk.id = info.id;
+                chunk.sha256sum = info.sha256sum;
+                rq.chunks[i] = chunk;
+            }
+
+            // TODO
+            rq.network = "TODO";
+            rq.sim_aircraft_name = "TODO";
+            rq.report_tool = "TODO";
+
+            Debug.WriteLine("ENVIANDO INFO BASICA");
+            Debug.WriteLine(rq.ToString());
+
+            _apiService.SetBearerToken(TokenStorage.GetToken());
+
+            var response = await _apiService.SubmitReportAsync(flightPlan.id, rq);
+
+            Debug.WriteLine("RESPUESTA INFO BASICA");
+            Debug.WriteLine(response.ToString());
+
+            if (response != null && response.IsSuccess)
+            {
+                this.submittedReportId = response.flight_report_id;
+            }
+
+            // TODO: Retries if something fails
+
+            return response;
+        }
+
+        public async Task<UploadChunkResponse> UploadChunk(int id)
+        {
+            var chunkPath = chunks[id].path;
+            var chunkId = chunks[id].id;
+
+            Debug.WriteLine($"ENVIANDO CHUNK {chunkPath} {chunkId} {submittedReportId}");
+
+            _apiService.SetBearerToken(TokenStorage.GetToken());
+
+            var response = await _apiService.UploadChunk(submittedReportId, chunkId, chunkPath);
+
+            Debug.WriteLine("RESPUESTA UPLOAD CHUNK");
+            Debug.WriteLine(response.ToString());
+
+            // TODO: Retries if something fails
+
+            return response;
+        }
+
+        public async Task CleanData()
+        {
+            // TODO
+        }
+
 
     }
 }

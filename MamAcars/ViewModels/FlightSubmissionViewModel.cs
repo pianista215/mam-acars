@@ -17,24 +17,27 @@ namespace MamAcars.ViewModels
 
         private readonly FlightContextService _contextService;
 
-        private Dictionary<int, string> _chunks = new();
+        private int numberOfChunks;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         public int Progress
         {
             get => _progress;
-            private set
+            set
             {
-                _progress = value;
-                OnPropertyChanged(nameof(Progress));
+                _dispatcher.Invoke(() =>
+                {
+                    _progress = value;
+                    OnPropertyChanged(nameof(Progress));
+                });
             }
         }
 
         public string StatusMessage
         {
             get => _statusMessage;
-            private set
+            set
             {
                 _statusMessage = value;
                 OnPropertyChanged(nameof(StatusMessage));
@@ -57,7 +60,7 @@ namespace MamAcars.ViewModels
                 {
                     ExportBlackBox,
                     SplitBlackBox,
-                    SendBasicInfo
+                    SendFlightReport
                 };
 
             int stepProgress = 100 / (steps.Count + 1);
@@ -68,10 +71,10 @@ namespace MamAcars.ViewModels
                 Progress += stepProgress;
             }
 
-            foreach (var chunkId in _chunks.Keys.OrderBy(x => x))
+            for (int i=0; i < numberOfChunks; i++)
             {
-                await UploadChunk(chunkId, _chunks.Count);
-                Progress += stepProgress / _chunks.Count;
+                await UploadChunk(i, numberOfChunks);
+                Progress += stepProgress / numberOfChunks;
             }
 
             await CleanUp();
@@ -79,6 +82,8 @@ namespace MamAcars.ViewModels
 
             OnSubmissionCompleted?.Invoke();
         }
+
+        // TODO: RETRIES/FAILURES MANAGEMENT
 
         private async Task ExportBlackBox()
         {
@@ -89,19 +94,19 @@ namespace MamAcars.ViewModels
         private async Task SplitBlackBox()
         {
             StatusMessage = "Splitting blackbox in pieces...";
-            _chunks = await _contextService.SplitBlackBoxData();
+            numberOfChunks = await _contextService.SplitBlackBoxData();
         }
 
-        private async Task SendBasicInfo()
+        private async Task SendFlightReport()
         {
             StatusMessage = "Sending basic information...";
-            await _contextService.SendBasicInformation();
+            await _contextService.SendFlightReport();
         }
 
         private async Task UploadChunk(int i, int totalChunks)
         {
-            StatusMessage = $"Uploading black box file {i} of {totalChunks}...";
-            await _contextService.SendChunkId(i);
+            StatusMessage = $"Uploading black box file {i + 1} of {totalChunks}...";
+            await _contextService.UploadChunk(i);
         }
 
         private async Task CleanUp()

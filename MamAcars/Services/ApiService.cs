@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -256,6 +258,69 @@ namespace MamAcars.Services
             }
         }
 
+        public async Task<UploadChunkResponse> UploadChunk(ulong flightReportId, int chunkId, string chunkPath)
+        {
+            try
+            {
+                var content = new MultipartFormDataContent();
+                var stream = File.OpenRead(chunkPath);
+                var streamContent = new StreamContent(stream);
+                content.Add(streamContent, "file", Path.GetFileName(chunkPath));
+
+                var response = await _httpClient.PostAsync($"v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var submitReportResponse = JsonSerializer.Deserialize<UploadChunkResponse>(responseContent);
+
+                    if (submitReportResponse != null)
+                    {
+                        submitReportResponse.IsSuccess = true;
+                        return submitReportResponse;
+                    }
+                    else
+                    {
+                        return new UploadChunkResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = "Failed to deserialize response from server."
+                        };
+                    }
+                }
+                else
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        return new UploadChunkResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = "Problem with authentication while uploading chunk. Try later"
+                        };
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
+
+                        return new UploadChunkResponse
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = $"Server: {errorData.message}"
+                        };
+                    }
+                }
+            } catch (Exception ex)
+            {
+                return new UploadChunkResponse
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
+                };
+            }
+
+        }
+
     }
 
     public class GenericErrorResponse
@@ -323,6 +388,14 @@ namespace MamAcars.Services
         public ulong flight_report_id { get; set; }
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
+    }
+
+    public class UploadChunkResponse
+    {
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; }
+
+        public string status { get; set; }
     }
     
 }

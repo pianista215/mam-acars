@@ -1,4 +1,5 @@
-﻿using MamAcars.Models;
+﻿using FSUIPC;
+using MamAcars.Models;
 using MamAcars.Utils;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Xml.Linq;
 
 namespace MamAcars.Services
 {
@@ -116,6 +118,7 @@ namespace MamAcars.Services
         public void SetComment(ulong flightId, string comment)
         {
             var startTime = DateTime.UtcNow;
+            // TODO: REUSE CONNECTION
             using var connection = new SQLiteConnection(_connectionString);
             connection.Open();
 
@@ -125,6 +128,85 @@ namespace MamAcars.Services
             command.Parameters.AddWithValue("@pilot_comment", comment);
             command.ExecuteNonQuery();
         }
+
+        public string GetComment(ulong flightId)
+        {
+            // TODO: REUSE CONNECTION
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT pilot_comment FROM flights WHERE id=@id;";
+            command.Parameters.AddWithValue("@id", flightId);
+
+            var result = command.ExecuteScalar() as string;
+            return result;
+        }
+
+        public double GetLastLatitude(ulong flightId)
+        {
+            // TODO: REUSE CONNECTION
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT c.value
+                FROM changes c
+                JOIN events e ON c.event_id = e.id
+                WHERE c.variable = 'Latitude' AND e.flight_id=@id
+                ORDER BY e.timestamp DESC
+                LIMIT 1;";
+            command.Parameters.AddWithValue("@id", flightId);
+
+            var result = command.ExecuteScalar() as string;
+            return Double.Parse(result);
+        }
+
+        public double GetLastLongitude(ulong flightId)
+        {
+            // TODO: REUSE CONNECTION
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT c.value
+                FROM changes c
+                JOIN events e ON c.event_id = e.id
+                WHERE c.variable = 'Longitude' AND e.flight_id=@id
+                ORDER BY e.timestamp DESC
+                LIMIT 1;";
+            command.Parameters.AddWithValue("@id", flightId);
+
+            var result = command.ExecuteScalar() as string;
+            return Double.Parse(result);
+        }
+
+        public (string startTime, string endTime) GetStartAndEndTime(ulong flightId)
+        {
+            
+            // TODO: REUSE CONNECTION
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT MIN(timestamp), MAX(timestamp) FROM events WHERE flight_id=@id;";
+            command.Parameters.AddWithValue("@id", flightId);
+
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+                throw new InvalidOperationException("No rows for this flightId in the events.");
+
+            DateTime firstTimestamp = DateTime.Parse(reader.GetString(0));
+            DateTime lastTimestamp = DateTime.Parse(reader.GetString(1));
+
+            string formattedFirst = firstTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+            string formattedLast = lastTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+
+            return (formattedFirst, formattedLast);
+        } 
 
         public void RecordEvent(ulong? flightId, BlackBoxBasicInformation currentState)
         {
@@ -252,40 +334,14 @@ namespace MamAcars.Services
             }
         }
 
-        public void ExportCurrentFlightToJson(ulong flightId)
+        public async Task<string> ExportAndCompressFlightToJson(ulong flightId)
         {
             var json = GenerateJson(flightId);
             var jsonFilePath = GetFlightJsonFilePath(flightId);
             var gzipFilePath = GetFlightGzipFilePath(flightId);
             FileHandler.WriteToFile(jsonFilePath, json);
             FileHandler.CompressFile(jsonFilePath, gzipFilePath);
-        }
-
-        public async Task<Dictionary<int, string>> SplitBlackBoxData(ulong flightId)
-        {
-            var gzipFilePath = GetFlightGzipFilePath(flightId);
-            var outputPath = Path.Combine(FlightsPath, flightId);
-            Directory.CreateDirectory(outputPath!);
-
-            var chunks = await FileSplitter.SplitFileAsync(gzipFilePath, outputPath);
-
-            var chunkMd5Hashes = new Dictionary<int, string>();
-
-            foreach (var chunkFile in chunks)
-            {
-                string md5 = FileHandler.GenerateMd5(chunkFile);
-                string fileName = Path.GetFileNameWithoutExtension(chunkFile); // "chunk_0001"
-                if (int.TryParse(fileName.Split('_')[1], out int chunkId))
-                { 
-                    chunkMd5Hashes[chunkId] = md5;
-                    Debug.WriteLine($"Chunk ID: {chunkId}, MD5: {md5}");
-                } else
-                {
-                    Debug.WriteLine($"Warning: Could not parse chunk ID from file {chunkFile}");
-                }
-            }
-
-            return chunkMd5Hashes;
+            return gzipFilePath;
         }
 
         private string GenerateJson(ulong flightId)
