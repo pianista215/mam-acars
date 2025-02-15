@@ -25,13 +25,13 @@ namespace MamAcars.Utils
             inputFileStream.CopyTo(gzipStream);
         }
 
-        public static string GenerateMd5(string filePath)
+        public static string GenerateSha256(string filePath)
         {
-            using var md5 = MD5.Create();
+            using var sha256 = SHA256.Create();
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
 
-            var hashBytes = md5.ComputeHash(stream);
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            var hashBytes = sha256.ComputeHash(stream);
+            return Convert.ToBase64String(hashBytes);
         }
     }
 }

@@ -27,7 +27,12 @@ namespace MamAcars
 
         private void ShowLoginPage()
         {
-            MainFrame.Navigate(new LoginPage(OnLoginSuccess));
+            MainFrame.Navigate(new LoginPage(OnLoginSuccess, CheckPendingSubmissions));
+        }
+
+        private void CheckPendingSubmissions()
+        {
+            MainFrame.Navigate(new FlightSubmissionPage(OnSendFlight));
         }
 
         private void OnLoginSuccess()

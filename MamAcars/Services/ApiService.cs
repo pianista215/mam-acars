@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -37,290 +38,131 @@ namespace MamAcars.Services
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        public async Task<LoginResponse> LoginAsync(string license, string password)
+        private async Task<TResponse> SendRequestAsync<TRequest, TResponse>(string url, HttpMethod method, TRequest? requestData = null)
+        where TRequest : class
+        where TResponse : BaseResponse, new()
         {
             SetDefaultHeaders();
+
             try
             {
-                var data = new LoginRequest
+                HttpRequestMessage request = new HttpRequestMessage(method, url);
+                if (requestData != null)
                 {
-                    license = license,
-                    password = password
-                };
-
-                var json = JsonSerializer.Serialize(data);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync("v1/auth/login", content);
-
-                // Verifica si la respuesta es exitosa
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent);
-
-                    if(loginResponse != null)
-                    {
-                        loginResponse.IsSuccess = true;
-                        return loginResponse;
-                    } else
-                    {
-                        return new LoginResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Failed to deserialize response from server."
-                        };
-                    }
+                    string json = JsonSerializer.Serialize(requestData);
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                    Debug.WriteLine($"[API Request] {method} {url}\nPayload: {json}");
                 }
                 else
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
+                    Debug.WriteLine($"[API Request] {method} {url}");
+                }
 
-                    return new LoginResponse
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[API Response] {response.StatusCode} {url}\nResponse: {responseContent}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<TResponse>(responseContent);
+                    if (result != null)
                     {
-                        IsSuccess = false,
-                        ErrorMessage = $"Server: {errorData.message}"
-                    };
+                        result.IsSuccess = true;
+                        return result;
+                    }
+                    return new TResponse { IsSuccess = false, ErrorMessage = "Failed to deserialize response from server." };
+                }
+                else
+                {
+                    return HandleErrorResponse<TResponse>(response.StatusCode, responseContent);
                 }
             }
             catch (TaskCanceledException)
             {
-                return new LoginResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = "Request timed out. Please try again."
-                };
+                Debug.WriteLine($"[API Error] Timeout on {method} {url}");
+                return new TResponse { IsSuccess = false, ErrorMessage = "Request timed out. Please try again." };
             }
             catch (Exception ex)
             {
-                return new LoginResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
-                };
+                Debug.WriteLine($"[API Error] Exception on {method} {url}: {ex.Message}");
+                return new TResponse { IsSuccess = false, ErrorMessage = $"An unexpected error occurred: {ex.Message}" };
             }
+        }
+
+        private TResponse HandleErrorResponse<TResponse>(System.Net.HttpStatusCode statusCode, string responseContent)
+            where TResponse : BaseResponse, new()
+        {
+            Debug.WriteLine($"[API Error] {statusCode}: {responseContent}");
+
+            if (statusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                return new TResponse { IsSuccess = false, ErrorMessage = "Unauthorized access. Please check your credentials." };
+            }
+            if (statusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return new TResponse { IsSuccess = false, ErrorMessage = "Resource not found." };
+            }
+
+            var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(responseContent);
+            return new TResponse { IsSuccess = false, ErrorMessage = $"Server: {errorData?.message ?? "Unknown error"}" };
+        }
+
+        public async Task<LoginResponse> LoginAsync(string license, string password)
+        {
+            var data = new LoginRequest { license = license, password = password };
+            return await SendRequestAsync<LoginRequest, LoginResponse>("v1/auth/login", HttpMethod.Post, data);
         }
 
         public async Task<FlightPlanInfoResponse> CurrentFlightPlanAsync()
         {
-            SetDefaultHeaders();
-            try
-            {
-
-                var response = await _httpClient.GetAsync("v1/flight-plan/current-fpl");
-
-                // Verifica si la respuesta es exitosa
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var flightInfoResponse = JsonSerializer.Deserialize<FlightPlanInfoResponse>(responseContent);
-
-                    if (flightInfoResponse != null)
-                    {
-                        flightInfoResponse.IsSuccess = true;
-                        return flightInfoResponse;
-                    }
-                    else
-                    {
-                        return new FlightPlanInfoResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Failed to deserialize response from server."
-                        };
-                    }
-                }
-                else
-                {
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        return new FlightPlanInfoResponse
-                        {
-                            IsSuccess = false,
-                            AuthFailure = true
-                        };
-                    } else if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    {
-                        return new FlightPlanInfoResponse
-                        {
-                            IsSuccess = false,
-                            EmptyFlightPlan = true
-                        };
-                    }
-                    else
-                    {
-                        var errorContent = await response.Content.ReadAsStringAsync();
-                        var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
-
-                        return new FlightPlanInfoResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = $"Server: {errorData.message}"
-                        };
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                return new FlightPlanInfoResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = "Request timed out. Please try again."
-                };
-            }
-            catch (Exception ex)
-            {
-                return new FlightPlanInfoResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
-                };
-            }
+            return await SendRequestAsync<object, FlightPlanInfoResponse>("v1/flight-plan/current-fpl", HttpMethod.Get);
         }
 
         public async Task<SubmitReportResponse> SubmitReportAsync(ulong flightPlanId, SubmitReportRequest rq)
         {
-            SetDefaultHeaders();
-            try
-            {
-
-                var json = JsonSerializer.Serialize(rq);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync($"v1/flight-report/submit-report?flight_plan_id={flightPlanId}", content);
-
-                // Verifica si la respuesta es exitosa
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var submitReportResponse = JsonSerializer.Deserialize<SubmitReportResponse>(responseContent);
-
-                    if (submitReportResponse != null)
-                    {
-                        submitReportResponse.IsSuccess = true;
-                        return submitReportResponse;
-                    }
-                    else
-                    {
-                        return new SubmitReportResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Failed to deserialize response from server."
-                        };
-                    }
-                }
-                else
-                {
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        return new SubmitReportResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Problem with authentication while closing flight plan. Try later"
-                        };
-                    }
-                    else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    {
-                        return new SubmitReportResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Can't find the submitted flight plan. Have you delete it?"
-                        };
-                    }
-                    else
-                    {
-                        var errorContent = await response.Content.ReadAsStringAsync();
-                        var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
-
-                        return new SubmitReportResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = $"Server: {errorData.message}"
-                        };
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                return new SubmitReportResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = "Request timed out. Please try again."
-                };
-            }
-            catch (Exception ex)
-            {
-                return new SubmitReportResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
-                };
-            }
+            string url = $"v1/flight-report/submit-report?flight_plan_id={flightPlanId}";
+            return await SendRequestAsync<SubmitReportRequest, SubmitReportResponse>(url, HttpMethod.Post, rq);
         }
 
-        public async Task<UploadChunkResponse> UploadChunk(ulong flightReportId, int chunkId, string chunkPath)
+        public async Task<UploadChunkResponse> UploadChunk(string flightReportId, int chunkId, string chunkPath)
         {
             try
             {
                 var content = new MultipartFormDataContent();
-                var stream = File.OpenRead(chunkPath);
+                using var stream = File.OpenRead(chunkPath);
                 var streamContent = new StreamContent(stream);
-                content.Add(streamContent, "file", Path.GetFileName(chunkPath));
+                content.Add(streamContent, "chunkFile", Path.GetFileName(chunkPath));
 
-                var response = await _httpClient.PostAsync($"v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}", content);
+                Debug.WriteLine($"[API Request] POST v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}\nUploading file: {chunkPath}");
+
+                HttpResponseMessage response = await _httpClient.PostAsync(
+                    $"v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}",
+                    content
+                );
+
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[API Response] {response.StatusCode} UploadChunk\nResponse: {responseContent}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var submitReportResponse = JsonSerializer.Deserialize<UploadChunkResponse>(responseContent);
-
-                    if (submitReportResponse != null)
-                    {
-                        submitReportResponse.IsSuccess = true;
-                        return submitReportResponse;
-                    }
-                    else
-                    {
-                        return new UploadChunkResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Failed to deserialize response from server."
-                        };
-                    }
+                    var result = JsonSerializer.Deserialize<UploadChunkResponse>(responseContent);
+                    return result ?? new UploadChunkResponse { IsSuccess = false, ErrorMessage = "Failed to deserialize response from server." };
                 }
-                else
-                {
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        return new UploadChunkResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = "Problem with authentication while uploading chunk. Try later"
-                        };
-                    }
-                    else
-                    {
-                        var errorContent = await response.Content.ReadAsStringAsync();
-                        var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(errorContent);
-
-                        return new UploadChunkResponse
-                        {
-                            IsSuccess = false,
-                            ErrorMessage = $"Server: {errorData.message}"
-                        };
-                    }
-                }
-            } catch (Exception ex)
-            {
-                return new UploadChunkResponse
-                {
-                    IsSuccess = false,
-                    ErrorMessage = $"An unexpected error occurred: {ex.Message}"
-                };
+                return HandleErrorResponse<UploadChunkResponse>(response.StatusCode, responseContent);
             }
-
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[API Error] Exception on UploadChunk: {ex.Message}");
+                return new UploadChunkResponse { IsSuccess = false, ErrorMessage = $"An unexpected error occurred: {ex.Message}" };
+            }
         }
 
+    }
+
+    public class BaseResponse
+    {
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; }
     }
 
     public class GenericErrorResponse
@@ -334,23 +176,15 @@ namespace MamAcars.Services
         public string password { get; set; }
     }
 
-    public class LoginResponse
+    public class LoginResponse : BaseResponse
     {
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; }
         public string access_token { get; set; }
     }
 
-    public class FlightPlanInfoResponse
+    public class FlightPlanInfoResponse : BaseResponse
     {
-        public bool IsSuccess { get; set; }
-
         public bool AuthFailure { get; set; } = false;
-
         public bool EmptyFlightPlan { get; set; } = false;
-
-        public string ErrorMessage { get; set; }
-
         public ulong id { get; set; }
         public string departure_icao { get; set; }
         public double departure_latitude { get; set; }
@@ -383,19 +217,14 @@ namespace MamAcars.Services
         public string sha256sum { get; set; }
     }
 
-    public class SubmitReportResponse
+    public class SubmitReportResponse : BaseResponse
     {
-        public ulong flight_report_id { get; set; }
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; }
+        public string flight_report_id { get; set; }
     }
 
-    public class UploadChunkResponse
+    public class UploadChunkResponse : BaseResponse
     {
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; }
-
         public string status { get; set; }
     }
-    
+
 }

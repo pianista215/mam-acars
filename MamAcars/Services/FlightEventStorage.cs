@@ -17,7 +17,7 @@ namespace MamAcars.Services
 {
     public class FlightEventStorage
     {
-        private readonly string _connectionString;
+        private readonly SQLiteConnection _connection;
         private readonly List<(int eventId, string variable, object value)> _eventBuffer = new();
         private readonly Timer _batchWriteTimer;
         private readonly object _lock = new();
@@ -46,7 +46,9 @@ namespace MamAcars.Services
 
         public FlightEventStorage()
         {
-            _connectionString = $"Data Source={FilePath};Version=3;";
+            var connectionString = $"Data Source={FilePath};Version=3;";
+            _connection = new SQLiteConnection(connectionString);
+            _connection.Open();
 
             if (!File.Exists(FilePath))
             {
@@ -63,19 +65,16 @@ namespace MamAcars.Services
 
         private void EnsureSchema()
         {
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
             string createFlightsTable = @"CREATE TABLE IF NOT EXISTS flights (
             id INTEGER PRIMARY KEY,
             aircraft TEXT NOT NULL,
-            pilot_comment TEXT,
-            start_time DATETIME NOT NULL
+            pilot_comment TEXT DEFAULT NULL,
+            report_id TEXT DEFAULT NULL
         );";
 
             string createEventTable = @"CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            flight_id TEXT NOT NULL,
+            flight_id INTEGER NOT NULL,
             timestamp DATETIME NOT NULL,
             FOREIGN KEY (flight_id) REFERENCES flights(id)
         );";
@@ -88,7 +87,14 @@ namespace MamAcars.Services
             FOREIGN KEY (event_id) REFERENCES events(id)
         );";
 
-            using var command = connection.CreateCommand();
+            string pendingChunksTable = @"CREATE TABLE IF NOT EXISTS chunks (
+            flight_id INTEGER NOT NULL,
+            id INTEGER NOT NULL,
+            path TEXT NOT NULL,
+            FOREIGN KEY (flight_id) REFERENCES flights(id)
+        );";
+
+            using var command = _connection.CreateCommand();
             command.CommandText = createFlightsTable;
             command.ExecuteNonQuery();
 
@@ -97,32 +103,74 @@ namespace MamAcars.Services
 
             command.CommandText = createChangesTable;
             command.ExecuteNonQuery();
+
+            command.CommandText = pendingChunksTable;
+            command.ExecuteNonQuery();
+        }
+
+        public void CleanAllData()
+        {
+            using var transaction = _connection.BeginTransaction();
+
+            using var command = _connection.CreateCommand();
+            command.CommandText = "DELETE FROM changes;";
+            command.ExecuteNonQuery();
+
+            command.CommandText = "DELETE FROM events;";
+            command.ExecuteNonQuery();
+
+            command.CommandText = "DELETE FROM chunks;";
+            command.ExecuteNonQuery();
+
+            command.CommandText = "DELETE FROM flights;";
+            command.ExecuteNonQuery();
+
+            transaction.Commit();
+        }
+
+        public class StoredFlightData
+        {
+            public long FlightId { get; set; }
+            public string Aircraft { get; set; }
+            public string? PilotComment { get; set; }
+            public string? ReportId { get; set; }
         }
 
         public void RegisterFlight(ulong flightId, string aircraft)
         {
-            var startTime = DateTime.UtcNow;
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
-            command.CommandText = @"INSERT INTO flights (id, aircraft, start_time) VALUES (@id, @aircraft, @start_time);";
+            using var command = _connection.CreateCommand();
+            command.CommandText = @"INSERT INTO flights (id, aircraft) VALUES (@id, @aircraft);";
             command.Parameters.AddWithValue("@id", flightId);
             command.Parameters.AddWithValue("@aircraft", aircraft);
-            command.Parameters.AddWithValue("@start_time", startTime);
             command.ExecuteNonQuery();
 
             _previousState = null; // Reset the state for a new flight
         }
 
+        public StoredFlightData GetPendingFlight()
+        {
+            using var command = _connection.CreateCommand();
+            command.CommandText = "SELECT id, aircraft, pilot_comment, report_id FROM flights WHERE pilot_comment IS NOT NULL LIMIT 1";
+            using var reader = command.ExecuteReader();
+
+            if (reader.Read())
+            {
+                return new StoredFlightData
+                {
+                    FlightId = reader.GetInt64(0),
+                    Aircraft = reader.GetString(1),
+                    PilotComment = reader.GetString(2),
+                    ReportId = reader.IsDBNull(3) ? null : reader.GetString(3)
+                };
+            } else
+            {
+                return null;
+            }
+        }
+
         public void SetComment(ulong flightId, string comment)
         {
-            var startTime = DateTime.UtcNow;
-            // TODO: REUSE CONNECTION
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText = @"UPDATE flights SET pilot_comment=@pilot_comment WHERE id=@id;";
             command.Parameters.AddWithValue("@id", flightId);
             command.Parameters.AddWithValue("@pilot_comment", comment);
@@ -131,11 +179,7 @@ namespace MamAcars.Services
 
         public string GetComment(ulong flightId)
         {
-            // TODO: REUSE CONNECTION
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText = @"SELECT pilot_comment FROM flights WHERE id=@id;";
             command.Parameters.AddWithValue("@id", flightId);
 
@@ -143,13 +187,57 @@ namespace MamAcars.Services
             return result;
         }
 
+        public void SetReportId(ulong flightId, string reportId)
+        {
+            using var command = _connection.CreateCommand();
+            command.CommandText = @"UPDATE flights SET report_id=@report_id WHERE id=@id;";
+            command.Parameters.AddWithValue("@id", flightId);
+            command.Parameters.AddWithValue("@report_id", reportId);
+            command.ExecuteNonQuery();
+        }
+
+        public void AddChunk(ulong flightId, int chunk_id, string path)
+        {
+            using var command = _connection.CreateCommand();
+            command.CommandText = @"INSERT INTO chunks(flight_id, id, path) VALUES (@flight_id, @id, @path);";
+            command.Parameters.AddWithValue("@id", flightId);
+            command.Parameters.AddWithValue("@id", chunk_id);
+            command.Parameters.AddWithValue("@path", path);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteChunk(ulong flightId, int chunk_id)
+        {
+            using var command = _connection.CreateCommand();
+            command.CommandText = @"DELETE FROM chunks WHERE flight_id = @flight_id AND id = @id;";
+            command.Parameters.AddWithValue("@flight_id", flightId);
+            command.Parameters.AddWithValue("@id", chunk_id);
+            command.ExecuteNonQuery();
+        }
+
+
+        public List<(int chunk_id, string path)> GetPendingChunks(ulong flightId)
+        {
+            var chunks = new List<(int, string)>();
+
+            using var command = _connection.CreateCommand();
+            command.CommandText = @"SELECT id, path FROM chunks WHERE flight_id = @flightId;";
+            command.Parameters.AddWithValue("@flightId", flightId);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int id = reader.GetInt32(0);
+                string path = reader.GetString(1);
+                chunks.Add((id, path));
+            }
+
+            return chunks;
+        }
+
         public double GetLastLatitude(ulong flightId)
         {
-            // TODO: REUSE CONNECTION
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText = @"
                 SELECT c.value
                 FROM changes c
@@ -165,11 +253,7 @@ namespace MamAcars.Services
 
         public double GetLastLongitude(ulong flightId)
         {
-            // TODO: REUSE CONNECTION
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText = @"
                 SELECT c.value
                 FROM changes c
@@ -185,12 +269,7 @@ namespace MamAcars.Services
 
         public (string startTime, string endTime) GetStartAndEndTime(ulong flightId)
         {
-            
-            // TODO: REUSE CONNECTION
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText = @"
                 SELECT MIN(timestamp), MAX(timestamp) FROM events WHERE flight_id=@id;";
             command.Parameters.AddWithValue("@id", flightId);
@@ -218,20 +297,17 @@ namespace MamAcars.Services
                 {
                     _currentEventId++;
 
-                    using var connection = new SQLiteConnection(_connectionString);
-                    connection.Open();
-
-                    using var transaction = connection.BeginTransaction();
+                    using var transaction = _connection.BeginTransaction();
 
                     // Insert event
-                    using var eventCommand = connection.CreateCommand();
+                    using var eventCommand = _connection.CreateCommand();
                     eventCommand.CommandText = @"INSERT INTO events (flight_id, timestamp) VALUES (@flight_id, @timestamp);";
                     eventCommand.Parameters.AddWithValue("@flight_id", flightId);
                     eventCommand.Parameters.AddWithValue("@timestamp", currentState.Timestamp);
                     eventCommand.ExecuteNonQuery();
 
                     // Insert changes
-                    using var changeCommand = connection.CreateCommand();
+                    using var changeCommand = _connection.CreateCommand();
                     changeCommand.CommandText = @"INSERT INTO changes (event_id, variable, value) VALUES (@event_id, @variable, @value);";
 
                     foreach (var change in changes)
@@ -312,12 +388,8 @@ namespace MamAcars.Services
             {
                 if (!_eventBuffer.Any()) return;
 
-                // TODO: REUSE CONNECTION AND DON'T INSTANTIATE ONE EACH TIME
-                using var connection = new SQLiteConnection(_connectionString);
-                connection.Open();
-
-                using var transaction = connection.BeginTransaction();
-                using var changeCommand = connection.CreateCommand();
+                using var transaction = _connection.BeginTransaction();
+                using var changeCommand = _connection.CreateCommand();
                 changeCommand.CommandText = @"INSERT INTO changes (event_id, variable, value) VALUES (@event_id, @variable, @value);";
 
                 foreach (var (eventId, variable, value) in _eventBuffer)
@@ -344,31 +416,28 @@ namespace MamAcars.Services
             return gzipFilePath;
         }
 
+        private class FlightJsonData
+        {
+            public ulong FlightId { get; set; }
+            public List<FlightJsonEvent> Events { get; set; }
+        }
+
+        private class FlightJsonEvent
+        {
+            public DateTime Timestamp { get; set; }
+            public Dictionary<string, object> Changes { get; set; }
+        }
+
         private string GenerateJson(ulong flightId)
         {
-            var flightData = new FlightData
+            var flightData = new FlightJsonData
             {
                 FlightId = flightId,
-                Events = new List<FlightEvent>()
+                Events = new List<FlightJsonEvent>()
             };
 
-            using var connection = new SQLiteConnection(_connectionString);
-            connection.Open();
-
-            // Query flight metadata
-            using var metadataCommand = connection.CreateCommand();
-            metadataCommand.CommandText = "SELECT pilot_comment, aircraft FROM flights WHERE id = @flight_id";
-            metadataCommand.Parameters.AddWithValue("@flight_id", flightId);
-
-            using var metadataReader = metadataCommand.ExecuteReader();
-            if (metadataReader.Read())
-            {
-                flightData.PilotComments = metadataReader.GetString(0);
-                flightData.Aircraft = metadataReader.GetString(1);
-            }
-
             // Query events
-            using var eventCommand = connection.CreateCommand();
+            using var eventCommand = _connection.CreateCommand();
             eventCommand.CommandText = "SELECT id, timestamp FROM events WHERE flight_id = @flight_id";
             eventCommand.Parameters.AddWithValue("@flight_id", flightId);
 
@@ -381,7 +450,7 @@ namespace MamAcars.Services
                 var changes = new Dictionary<string, object>();
 
                 // Query changes for this event
-                using var changeCommand = connection.CreateCommand();
+                using var changeCommand = _connection.CreateCommand();
                 changeCommand.CommandText = "SELECT variable, value FROM changes WHERE event_id = @event_id";
                 changeCommand.Parameters.AddWithValue("@event_id", eventId);
 
@@ -393,7 +462,7 @@ namespace MamAcars.Services
                     changes[variable] = value;
                 }
 
-                flightData.Events.Add(new FlightEvent
+                flightData.Events.Add(new FlightJsonEvent
                 {
                     Timestamp = timestamp,
                     Changes = changes
@@ -411,6 +480,7 @@ namespace MamAcars.Services
         {
             _batchWriteTimer.Stop();
             WriteBatchToDatabase();
+            _connection?.Close();
         }
     }
 }

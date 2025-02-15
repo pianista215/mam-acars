@@ -26,9 +26,19 @@ namespace MamAcars.ViewModels
             _contextService = FlightContextService.Instance;
         }
 
-        public Boolean existsPreviousLoginToken()
+        public Boolean ExistsPreviousLoginToken()
         {
-            return _contextService.existStoredCredentials();
+            return _contextService.ExistStoredCredentials();
+        }
+
+        public Boolean ExistsPendingFlightToBeSubmitted()
+        {
+            return _contextService.ExistsPendingFlightToBeSubmitted();
+        }
+
+        public void CleanPreviousData()
+        {
+            _contextService.CleanPreviousData();
         }
 
         public async Task<bool> Login()

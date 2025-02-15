@@ -20,16 +20,18 @@ namespace MamAcars
     public partial class LoginPage : Page
     {
         private Action _onLoginSuccess;
+        private Action _onPendingSubmission;
 
         private LoginViewModel _viewModel;
 
-        public LoginPage(Action onLoginSuccess)
+        public LoginPage(Action onLoginSuccess, Action onPendingSubmission)
         {
             InitializeComponent();
             _viewModel = new LoginViewModel();
             DataContext = _viewModel;
             _viewModel.OnLoginSuccess += onLoginSuccess;
             _onLoginSuccess = onLoginSuccess;
+            _onPendingSubmission = onPendingSubmission;
         }
 
         private void disableComponents()
@@ -47,11 +49,35 @@ namespace MamAcars
             PasswordBox.IsEnabled = true;
         }
 
+        private void AskForPendingFlightDataUpload()
+        {
+            var result = MessageBox.Show("You have one flight with pending data to be uploaded. Do you want to upload it? Otherwise the data will be deleted",
+                             "Pending flight data to upload",
+                             MessageBoxButton.YesNo,
+                             MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _onPendingSubmission?.Invoke();
+            }
+            else
+            {
+                _viewModel.CleanPreviousData();
+                _onLoginSuccess?.Invoke();
+            }
+        }
+
         private void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            if (_viewModel.existsPreviousLoginToken())
+            if (_viewModel.ExistsPreviousLoginToken())
             {
-                _onLoginSuccess?.Invoke();
+                if (_viewModel.ExistsPendingFlightToBeSubmitted())
+                {
+                    AskForPendingFlightDataUpload();
+                } else
+                {
+                    _onLoginSuccess?.Invoke();
+                }
             }
         }
 
@@ -69,7 +95,14 @@ namespace MamAcars
 
                 if (success)
                 {
-                    _onLoginSuccess();
+                    if (_viewModel.ExistsPendingFlightToBeSubmitted())
+                    {
+                        AskForPendingFlightDataUpload();
+                    }
+                    else
+                    {
+                        _onLoginSuccess?.Invoke();
+                    }
                 }
                 else
                 {

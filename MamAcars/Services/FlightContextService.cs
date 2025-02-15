@@ -29,7 +29,7 @@ namespace MamAcars.Services
         private string gzipFlightPath;
         private List<ChunkInfo> chunks;
 
-        private ulong submittedReportId;
+        private string submittedReportId;
 
         private FlightContextService()
         {
@@ -38,10 +38,20 @@ namespace MamAcars.Services
             _fsuipcService = new FsuipcService(_storage);
         }
 
-        public Boolean existStoredCredentials()
+        public Boolean ExistStoredCredentials()
         {
             var token = TokenStorage.GetToken();
             return !string.IsNullOrEmpty(token);
+        }
+
+        public Boolean ExistsPendingFlightToBeSubmitted()
+        {
+            return _storage.GetPendingFlight() != null;
+        }
+
+        public void CleanPreviousData()
+        {
+            _storage.CleanAllData();
         }
 
         public async Task<LoginResponse> Login(string license, string password)
@@ -137,7 +147,7 @@ namespace MamAcars.Services
                 var chunk = new ChunkInfo();
                 chunk.id = i + 1;
                 chunk.path = chunkPath;
-                chunk.sha256sum = FileHandler.GenerateMd5(chunkPath);
+                chunk.sha256sum = FileHandler.GenerateSha256(chunkPath);
 
                 result.Add(chunk);
             }
