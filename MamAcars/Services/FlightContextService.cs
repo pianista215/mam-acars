@@ -83,6 +83,10 @@ namespace MamAcars.Services
             return flightInfo;
         }
 
+        public FlightPlanInfoResponse GetCurrentFlightPlan() {
+            return flightPlan;
+        }
+
         public void startMonitoringSimulator(Action<bool> SimStatusChanged, Action<bool> AircraftLocationChanged)
         {
             _fsuipcService.SimStatusChanged += SimStatusChanged;

@@ -36,6 +36,7 @@ namespace MamAcars
 
         private void disableComponents()
         {
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
             LoginBtn.IsEnabled = false;
             LicenseTextbox.IsEnabled = false;
             PasswordBox.IsEnabled = false;
@@ -47,6 +48,7 @@ namespace MamAcars
             LoginBtn.IsEnabled = true;
             LicenseTextbox.IsEnabled = true;
             PasswordBox.IsEnabled = true;
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
         }
 
         private void AskForPendingFlightDataUpload()
@@ -67,17 +69,30 @@ namespace MamAcars
             }
         }
 
-        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        private async void OnPageLoaded(object sender, RoutedEventArgs e)
         {
+            disableComponents();
             if (_viewModel.ExistsPreviousLoginToken())
             {
-                if (_viewModel.ExistsPendingFlightToBeSubmitted())
+                bool validAuth = await _viewModel.LoginWithExistingCredentials();
+                if (validAuth)
                 {
-                    AskForPendingFlightDataUpload();
+                    if (_viewModel.ExistsPendingFlightToBeSubmitted())
+                    {
+                        AskForPendingFlightDataUpload();
+                    }
+                    else
+                    {
+                        _onLoginSuccess?.Invoke();
+                    }
                 } else
                 {
-                    _onLoginSuccess?.Invoke();
+                    enableComponents();
                 }
+               
+            } else
+            {
+                enableComponents();
             }
         }
 

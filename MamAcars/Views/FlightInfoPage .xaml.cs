@@ -34,7 +34,9 @@ namespace MamAcars
 
         private async void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            await _viewModel.LoadFlightInfoAsync();
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            _viewModel.LoadFlightInfo();
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
         }
 
         private void OnStartFlight(object sender, RoutedEventArgs e)

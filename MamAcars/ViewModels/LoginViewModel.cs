@@ -48,6 +48,7 @@ namespace MamAcars.ViewModels
             if (response.IsSuccess)
             {
                 IsErrorVisible = false;
+                await _contextService.LoadCurrentFlightPlan();
                 return true;
             }
             else
@@ -56,6 +57,13 @@ namespace MamAcars.ViewModels
                 IsErrorVisible = true;
                 return false;
             }
+        }
+
+        public async Task<bool> LoginWithExistingCredentials()
+        {
+            var response = await _contextService.LoadCurrentFlightPlan();
+
+            return response != null && !response.AuthFailure;
         }
     }
 }

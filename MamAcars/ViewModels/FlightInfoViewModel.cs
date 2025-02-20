@@ -116,11 +116,11 @@ namespace MamAcars.ViewModels
             }
         }
 
-        public async Task LoadFlightInfoAsync()
+        public void LoadFlightInfo()
         {
             try
             {
-                var flightInfo = await _contextService.LoadCurrentFlightPlan();
+                var flightInfo = _contextService.GetCurrentFlightPlan();
 
                 if (flightInfo == null)
                 {
