@@ -126,6 +126,23 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
 
             transaction.Commit();
+
+            ClearFlightsFolder();
+        }
+
+        private void ClearFlightsFolder()
+        {
+            if (Directory.Exists(FlightsPath))
+            {
+                try
+                {
+                    Directory.Delete(FlightsPath, true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error cleaning FlightsPath {ex.Message}");
+                }
+            }
         }
 
         public class StoredFlightData
@@ -479,7 +496,6 @@ namespace MamAcars.Services
         public void Dispose()
         {
             _batchWriteTimer.Stop();
-            WriteBatchToDatabase();
             _connection?.Close();
         }
     }

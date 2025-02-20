@@ -229,7 +229,7 @@ namespace MamAcars.Services
 
         public async Task CleanData()
         {
-            // TODO
+            _storage.CleanAllData();
         }
 
 
