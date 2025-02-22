@@ -96,7 +96,7 @@ namespace MamAcars.Services
 
             if (statusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                return new TResponse { IsSuccess = false, ErrorMessage = "Unauthorized access. Please check your credentials." };
+                return new TResponse { IsSuccess = false, AuthFailure = true, ErrorMessage = "Unauthorized access. Please check your credentials." };
             }
             if (statusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -118,7 +118,7 @@ namespace MamAcars.Services
             return await SendRequestAsync<object, FlightPlanInfoResponse>("v1/flight-plan/current-fpl", HttpMethod.Get);
         }
 
-        public async Task<SubmitReportResponse> SubmitReportAsync(ulong flightPlanId, SubmitReportRequest rq)
+        public async Task<SubmitReportResponse> SubmitReportAsync(long flightPlanId, SubmitReportRequest rq)
         {
             string url = $"v1/flight-report/submit-report?flight_plan_id={flightPlanId}";
             return await SendRequestAsync<SubmitReportRequest, SubmitReportResponse>(url, HttpMethod.Post, rq);
@@ -146,7 +146,14 @@ namespace MamAcars.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var result = JsonSerializer.Deserialize<UploadChunkResponse>(responseContent);
-                    return result ?? new UploadChunkResponse { IsSuccess = false, ErrorMessage = "Failed to deserialize response from server." };
+                    if(result != null)
+                    {
+                        result.IsSuccess = true;
+                        return result;
+                    } else
+                    {
+                        new UploadChunkResponse { IsSuccess = false, ErrorMessage = "Failed to deserialize response from server." };
+                    }
                 }
                 return HandleErrorResponse<UploadChunkResponse>(response.StatusCode, responseContent);
             }
@@ -163,6 +170,7 @@ namespace MamAcars.Services
     {
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
+        public bool AuthFailure { get; set; } = false;
     }
 
     public class GenericErrorResponse
@@ -183,9 +191,8 @@ namespace MamAcars.Services
 
     public class FlightPlanInfoResponse : BaseResponse
     {
-        public bool AuthFailure { get; set; } = false;
         public bool EmptyFlightPlan { get; set; } = false;
-        public ulong id { get; set; }
+        public long id { get; set; }
         public string departure_icao { get; set; }
         public double departure_latitude { get; set; }
         public double departure_longitude { get; set; }

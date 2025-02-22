@@ -49,6 +49,13 @@ namespace MamAcars.Services
             return _storage.GetPendingFlight() != null;
         }
 
+        public void LoadPendingDataForSubmit()
+        {
+            var pendingFlight = _storage.GetPendingFlight();
+            this.flightPlan = new FlightPlanInfoResponse();
+            this.flightPlan.id = pendingFlight.FlightId;
+        }
+
         public void CleanPreviousData()
         {
             _storage.CleanAllData();
@@ -226,12 +233,6 @@ namespace MamAcars.Services
 
             return response;
         }
-
-        public async Task CleanData()
-        {
-            _storage.CleanAllData();
-        }
-
 
     }
 }

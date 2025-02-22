@@ -140,7 +140,7 @@ namespace MamAcars.Services
             public double AirportLongitude { get; set; }
         }
 
-        public void startSavingBlackBox(ulong flightPlanId)
+        public void startSavingBlackBox(long flightPlanId)
         {
             _storage.RegisterFlight(flightPlanId, "xplane_aircraft_xxx");
             _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
@@ -179,7 +179,7 @@ namespace MamAcars.Services
 
                 Debug.WriteLine(blackBoxBasicInformation.ToString());
 
-                var flightId = state as ulong?;
+                var flightId = state as long?;
 
                 _storage.RecordEvent(flightId, blackBoxBasicInformation);
             } catch

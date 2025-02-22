@@ -56,63 +56,119 @@ namespace MamAcars.ViewModels
 
         public async Task SubmitFlightReport()
         {
-            List<Func<Task>> steps = new()
-                {
-                    ExportBlackBox,
-                    SplitBlackBox,
-                    SendFlightReport
-                };
+            // If one step fail just return (each one will set error message)
+            List<Func<Task<bool>>> steps = new()
+            {
+                ExportBlackBox,
+                SplitBlackBox,
+                SendFlightReport
+            };
 
             int stepProgress = 100 / (steps.Count + 1);
 
             foreach (var step in steps)
             {
-                await step();
+                if (!await step()) return;
                 Progress += stepProgress;
             }
 
-            for (int i=0; i < numberOfChunks; i++)
+            for (int i = 0; i < numberOfChunks; i++)
             {
-                await UploadChunk(i, numberOfChunks);
+                if (!await UploadChunk(i, numberOfChunks)) return;
                 Progress += stepProgress / numberOfChunks;
             }
 
-            await CleanUp();
-            Progress = 100;
-
-            OnSubmissionCompleted?.Invoke();
+            if (await CleanUp())
+            {
+                Progress = 100;
+                OnSubmissionCompleted?.Invoke();
+            }
         }
 
         // TODO: RETRIES/FAILURES MANAGEMENT
 
-        private async Task ExportBlackBox()
+        private async Task<bool> ExportBlackBox()
         {
             StatusMessage = "Exporting events to blackbox file...";
-            await _contextService.ExportFlightToJson();
+            try
+            {
+                await _contextService.ExportFlightToJson();
+            } catch (Exception ex)
+            {
+                StatusMessage = $"Error exporting events to blackboxfile: {ex.Message}";
+                return false;
+            }
+
+            return true;
         }
 
-        private async Task SplitBlackBox()
+        private async Task<bool> SplitBlackBox()
         {
             StatusMessage = "Splitting blackbox in pieces...";
-            numberOfChunks = await _contextService.SplitBlackBoxData();
+            try {
+                this.numberOfChunks = await _contextService.SplitBlackBoxData();
+            } catch (Exception ex)
+            {
+                StatusMessage = $"Error splitting blackbox: {ex.Message}";
+                return false;
+            }
+            return true;
         }
 
-        private async Task SendFlightReport()
+        private async Task<bool> SendFlightReport()
         {
             StatusMessage = "Sending basic information...";
-            await _contextService.SendFlightReport();
+            try
+            {
+                var result = await _contextService.SendFlightReport();
+                if (!result.IsSuccess)
+                {
+                    StatusMessage = $"Error sending basic information (server): {result.ErrorMessage}";
+                    return false;
+                }
+            } catch (Exception ex)
+            {
+                StatusMessage = $"Error sending basic information: ${ex.Message}";
+                return false;
+            }
+
+            return true;
         }
 
-        private async Task UploadChunk(int i, int totalChunks)
+        private async Task<bool> UploadChunk(int i, int totalChunks)
         {
             StatusMessage = $"Uploading black box file {i + 1} of {totalChunks}...";
-            await _contextService.UploadChunk(i);
+            try
+            {
+                var result = await _contextService.UploadChunk(i);
+                if (!result.IsSuccess)
+                {
+                    StatusMessage = $"Error uploading black box file {i + 1} (server): {result.ErrorMessage}";
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error uploading black box file {i + 1} {ex.Message}";
+                return false;
+            }
+
+            return true;
         }
 
-        private async Task CleanUp()
+        private async Task<bool> CleanUp()
         {
             StatusMessage = "Cleaning up...";
-            await _contextService.CleanData();
+            try
+            {
+                _contextService.CleanPreviousData();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error cleaning up: {ex.Message}";
+                return false;
+            }
+            return true;
         }
 
         protected virtual void OnPropertyChanged(string propertyName)

@@ -2,7 +2,9 @@
 using MamAcars.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -60,6 +62,7 @@ namespace MamAcars
 
             if (result == MessageBoxResult.Yes)
             {
+                _viewModel.PreparePendingDataForSubmit();
                 _onPendingSubmission?.Invoke();
             }
             else
@@ -75,6 +78,7 @@ namespace MamAcars
             if (_viewModel.ExistsPreviousLoginToken())
             {
                 bool validAuth = await _viewModel.LoginWithExistingCredentials();
+                
                 if (validAuth)
                 {
                     if (_viewModel.ExistsPendingFlightToBeSubmitted())
@@ -83,6 +87,7 @@ namespace MamAcars
                     }
                     else
                     {
+                        _viewModel.CleanPreviousData();
                         _onLoginSuccess?.Invoke();
                     }
                 } else
@@ -116,6 +121,7 @@ namespace MamAcars
                     }
                     else
                     {
+                        _viewModel.CleanPreviousData();
                         _onLoginSuccess?.Invoke();
                     }
                 }

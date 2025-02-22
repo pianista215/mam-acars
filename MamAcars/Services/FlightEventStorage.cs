@@ -23,7 +23,6 @@ namespace MamAcars.Services
         private readonly object _lock = new();
 
         private BlackBoxBasicInformation _previousState;
-        private int _currentEventId = 0;
 
         private static readonly string FilePath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "sqlite.dat");
@@ -31,13 +30,13 @@ namespace MamAcars.Services
         private static readonly string FlightsPath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "flights");
 
-        private string GetFlightJsonFilePath(ulong flightId)
+        private string GetFlightJsonFilePath(long flightId)
         {
             Directory.CreateDirectory(FlightsPath!);
             return Path.Combine(FlightsPath, $"{flightId}.json");
         }
 
-        private string GetFlightGzipFilePath(ulong flightId)
+        private string GetFlightGzipFilePath(long flightId)
         {
             Directory.CreateDirectory(FlightsPath!);
             return Path.Combine(FlightsPath, $"{flightId}.gz");
@@ -116,7 +115,13 @@ namespace MamAcars.Services
             command.CommandText = "DELETE FROM changes;";
             command.ExecuteNonQuery();
 
+            command.CommandText = "DELETE FROM sqlite_sequence WHERE name = 'changes'";
+            command.ExecuteNonQuery();
+
             command.CommandText = "DELETE FROM events;";
+            command.ExecuteNonQuery();
+
+            command.CommandText = "DELETE FROM sqlite_sequence WHERE name = 'events'";
             command.ExecuteNonQuery();
 
             command.CommandText = "DELETE FROM chunks;";
@@ -153,7 +158,7 @@ namespace MamAcars.Services
             public string? ReportId { get; set; }
         }
 
-        public void RegisterFlight(ulong flightId, string aircraft)
+        public void RegisterFlight(long flightId, string aircraft)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"INSERT INTO flights (id, aircraft) VALUES (@id, @aircraft);";
@@ -185,7 +190,7 @@ namespace MamAcars.Services
             }
         }
 
-        public void SetComment(ulong flightId, string comment)
+        public void SetComment(long flightId, string comment)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"UPDATE flights SET pilot_comment=@pilot_comment WHERE id=@id;";
@@ -194,7 +199,7 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
         }
 
-        public string GetComment(ulong flightId)
+        public string GetComment(long flightId)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"SELECT pilot_comment FROM flights WHERE id=@id;";
@@ -204,7 +209,7 @@ namespace MamAcars.Services
             return result;
         }
 
-        public void SetReportId(ulong flightId, string reportId)
+        public void SetReportId(long flightId, string reportId)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"UPDATE flights SET report_id=@report_id WHERE id=@id;";
@@ -213,7 +218,7 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
         }
 
-        public void AddChunk(ulong flightId, int chunk_id, string path)
+        public void AddChunk(long flightId, int chunk_id, string path)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"INSERT INTO chunks(flight_id, id, path) VALUES (@flight_id, @id, @path);";
@@ -223,7 +228,7 @@ namespace MamAcars.Services
             command.ExecuteNonQuery();
         }
 
-        public void DeleteChunk(ulong flightId, int chunk_id)
+        public void DeleteChunk(long flightId, int chunk_id)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"DELETE FROM chunks WHERE flight_id = @flight_id AND id = @id;";
@@ -233,7 +238,7 @@ namespace MamAcars.Services
         }
 
 
-        public List<(int chunk_id, string path)> GetPendingChunks(ulong flightId)
+        public List<(int chunk_id, string path)> GetPendingChunks(long flightId)
         {
             var chunks = new List<(int, string)>();
 
@@ -252,7 +257,7 @@ namespace MamAcars.Services
             return chunks;
         }
 
-        public double GetLastLatitude(ulong flightId)
+        public double GetLastLatitude(long flightId)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"
@@ -268,7 +273,7 @@ namespace MamAcars.Services
             return Double.Parse(result);
         }
 
-        public double GetLastLongitude(ulong flightId)
+        public double GetLastLongitude(long flightId)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"
@@ -284,7 +289,7 @@ namespace MamAcars.Services
             return Double.Parse(result);
         }
 
-        public (string startTime, string endTime) GetStartAndEndTime(ulong flightId)
+        public (string startTime, string endTime) GetStartAndEndTime(long flightId)
         {
             using var command = _connection.CreateCommand();
             command.CommandText = @"
@@ -304,7 +309,7 @@ namespace MamAcars.Services
             return (formattedFirst, formattedLast);
         } 
 
-        public void RecordEvent(ulong? flightId, BlackBoxBasicInformation currentState)
+        public void RecordEvent(long? flightId, BlackBoxBasicInformation currentState)
         {
             var changes = GetChanges(_previousState, currentState);
 
@@ -312,7 +317,6 @@ namespace MamAcars.Services
             {
                 lock (_lock)
                 {
-                    _currentEventId++;
 
                     using var transaction = _connection.BeginTransaction();
 
@@ -323,6 +327,8 @@ namespace MamAcars.Services
                     eventCommand.Parameters.AddWithValue("@timestamp", currentState.Timestamp);
                     eventCommand.ExecuteNonQuery();
 
+                    long eventId = _connection.LastInsertRowId;
+
                     // Insert changes
                     using var changeCommand = _connection.CreateCommand();
                     changeCommand.CommandText = @"INSERT INTO changes (event_id, variable, value) VALUES (@event_id, @variable, @value);";
@@ -330,7 +336,7 @@ namespace MamAcars.Services
                     foreach (var change in changes)
                     {
                         changeCommand.Parameters.Clear();
-                        changeCommand.Parameters.AddWithValue("@event_id", _currentEventId);
+                        changeCommand.Parameters.AddWithValue("@event_id", eventId);
                         changeCommand.Parameters.AddWithValue("@variable", change.Key);
                         changeCommand.Parameters.AddWithValue("@value", change.Value.ToString());
                         changeCommand.ExecuteNonQuery();
@@ -423,7 +429,7 @@ namespace MamAcars.Services
             }
         }
 
-        public async Task<string> ExportAndCompressFlightToJson(ulong flightId)
+        public async Task<string> ExportAndCompressFlightToJson(long flightId)
         {
             var json = GenerateJson(flightId);
             var jsonFilePath = GetFlightJsonFilePath(flightId);
@@ -435,7 +441,7 @@ namespace MamAcars.Services
 
         private class FlightJsonData
         {
-            public ulong FlightId { get; set; }
+            public long FlightId { get; set; }
             public List<FlightJsonEvent> Events { get; set; }
         }
 
@@ -445,7 +451,7 @@ namespace MamAcars.Services
             public Dictionary<string, object> Changes { get; set; }
         }
 
-        private string GenerateJson(ulong flightId)
+        private string GenerateJson(long flightId)
         {
             var flightData = new FlightJsonData
             {

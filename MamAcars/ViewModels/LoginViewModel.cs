@@ -1,8 +1,10 @@
 ﻿using MamAcars.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -34,6 +36,11 @@ namespace MamAcars.ViewModels
         public Boolean ExistsPendingFlightToBeSubmitted()
         {
             return _contextService.ExistsPendingFlightToBeSubmitted();
+        }
+
+        public void PreparePendingDataForSubmit()
+        {
+            _contextService.LoadPendingDataForSubmit();
         }
 
         public void CleanPreviousData()
