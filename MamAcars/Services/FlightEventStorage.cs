@@ -1,6 +1,7 @@
 ﻿using FSUIPC;
 using MamAcars.Models;
 using MamAcars.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -145,7 +146,7 @@ namespace MamAcars.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error cleaning FlightsPath {ex.Message}");
+                    Log.Error("Error cleaning FlightPath", ex);
                 }
             }
         }

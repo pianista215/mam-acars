@@ -177,8 +177,6 @@ namespace MamAcars.Services
 
                 blackBoxBasicInformation.GroundSpeedKnots = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d);
 
-                Debug.WriteLine(blackBoxBasicInformation.ToString());
-
                 var flightId = state as long?;
 
                 _storage.RecordEvent(flightId, blackBoxBasicInformation);
