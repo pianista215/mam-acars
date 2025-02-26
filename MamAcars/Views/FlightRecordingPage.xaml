@@ -1,0 +1,49 @@
+﻿<Page x:Class="MamAcars.FlightRecordingPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:MamAcars"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="FlightRecordingPage">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Flight Recording Status -->
+            <RowDefinition Height="*"/>
+            <!-- Flight Time -->
+            <RowDefinition Height="Auto"/>
+            <!-- End Flight Button -->
+        </Grid.RowDefinitions>
+
+        <!-- Flight Recording Status -->
+        <TextBlock Name="RecordingStatus" 
+               Text="Flight Recording in Progress..." 
+               FontSize="20" 
+               HorizontalAlignment="Center" 
+               VerticalAlignment="Center" 
+               Grid.Row="0"/>
+
+        <!-- Flight Time -->
+        <TextBlock Name="FlightTime" 
+               Text="{Binding ElapsedTime}" 
+               FontSize="30" 
+               HorizontalAlignment="Center" 
+               VerticalAlignment="Center" 
+               Grid.Row="1" 
+               Margin="0,40,0,0"/>
+
+        <!-- End Flight Button -->
+        <Button Name="EndFlightButton" 
+            Content="End Flight" 
+            FontSize="18" 
+            Width="200" 
+            HorizontalAlignment="Center" 
+            Padding="10"
+            Margin="0,20,0,0" 
+            Grid.Row="2" 
+            Click="OnEndFlightClicked"/>
+    </Grid>
+</Page>
