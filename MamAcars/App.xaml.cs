@@ -35,7 +35,7 @@ namespace MamAcars
 
         protected override void OnExit(ExitEventArgs e)
         {
-            Log.Information("Aplicación cerrada");
+            Log.Information("App closed");
             Log.CloseAndFlush();
             base.OnExit(e);
         }

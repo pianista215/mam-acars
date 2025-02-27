@@ -44,6 +44,7 @@ namespace MamAcars.Services
         where TResponse : BaseResponse, new()
         {
             SetDefaultHeaders();
+            bool isLoginRequest = url.Contains("v1/auth/login");
 
             try
             {
@@ -52,7 +53,13 @@ namespace MamAcars.Services
                 {
                     string json = JsonSerializer.Serialize(requestData);
                     request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                    Log.Information($"[API Request] {method} {url}\nPayload: {json}");
+                    if (isLoginRequest)
+                    {
+                        Log.Information($"[API Request] {method} {url} (login obfuscated)");
+                    } else
+                    {
+                        Log.Information($"[API Request] {method} {url}\nPayload: {json}");
+                    }
                 }
                 else
                 {
@@ -61,7 +68,13 @@ namespace MamAcars.Services
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Log.Information($"[API Response] {response.StatusCode} {url}\nResponse: {responseContent}");
+                if (isLoginRequest)
+                {
+                    Log.Information($"[API Response] {response.StatusCode} {url} (login obfuscated)");
+                } else
+                {
+                    Log.Information($"[API Response] {response.StatusCode} {url}\nResponse: {responseContent}");
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
