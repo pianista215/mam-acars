@@ -2,6 +2,7 @@
 using MamAcars.Models;
 using MamAcars.Utils;
 using Microsoft.VisualBasic;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -142,12 +143,14 @@ namespace MamAcars.Services
 
         public void startSavingBlackBox(long flightPlanId)
         {
+            Log.Information($"Start saving blackbox fplId {flightPlanId}");
             _storage.RegisterFlight(flightPlanId, "xplane_aircraft_xxx");
             _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
         }
 
         public void stopSavingBlackBox()
         {
+            Log.Information("Stop saving blackbox");
             _timer?.Dispose();
         }
 
