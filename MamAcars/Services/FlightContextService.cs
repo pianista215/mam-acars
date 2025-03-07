@@ -1,6 +1,7 @@
 ﻿using FSUIPC;
 using MamAcars.Models;
 using MamAcars.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -54,6 +55,7 @@ namespace MamAcars.Services
             var pendingFlight = _storage.GetPendingFlight();
             this.flightPlan = new FlightPlanInfoResponse();
             this.flightPlan.id = pendingFlight.FlightId;
+            Log.Information($"Loaded pending data for submit. Flight Id: {this.flightPlan.id}");
         }
 
         public void CleanPreviousData()

@@ -1,4 +1,5 @@
 ﻿using MamAcars.Services;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,16 +36,20 @@ namespace MamAcars.ViewModels
 
         public Boolean ExistsPendingFlightToBeSubmitted()
         {
-            return _contextService.ExistsPendingFlightToBeSubmitted();
+            var result = _contextService.ExistsPendingFlightToBeSubmitted();
+            Log.Information($"Pending flights to be submitted: {result}");
+            return result;
         }
 
         public void PreparePendingDataForSubmit()
         {
+            Log.Information("Loading pending data for submit stored flight");
             _contextService.LoadPendingDataForSubmit();
         }
 
         public void CleanPreviousData()
         {
+            Log.Information("Cleaning pending data");
             _contextService.CleanPreviousData();
         }
 
