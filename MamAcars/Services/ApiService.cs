@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -43,6 +44,7 @@ namespace MamAcars.Services
         where TResponse : BaseResponse, new()
         {
             SetDefaultHeaders();
+            bool isLoginRequest = url.Contains("v1/auth/login");
 
             try
             {
@@ -51,16 +53,28 @@ namespace MamAcars.Services
                 {
                     string json = JsonSerializer.Serialize(requestData);
                     request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                    Debug.WriteLine($"[API Request] {method} {url}\nPayload: {json}");
+                    if (isLoginRequest)
+                    {
+                        Log.Information($"[API Request] {method} {url} (login obfuscated)");
+                    } else
+                    {
+                        Log.Information($"[API Request] {method} {url}\nPayload: {json}");
+                    }
                 }
                 else
                 {
-                    Debug.WriteLine($"[API Request] {method} {url}");
+                    Log.Information($"[API Request] {method} {url}");
                 }
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[API Response] {response.StatusCode} {url}\nResponse: {responseContent}");
+                if (isLoginRequest)
+                {
+                    Log.Information($"[API Response] {response.StatusCode} {url} (login obfuscated)");
+                } else
+                {
+                    Log.Information($"[API Response] {response.StatusCode} {url}\nResponse: {responseContent}");
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -79,12 +93,12 @@ namespace MamAcars.Services
             }
             catch (TaskCanceledException)
             {
-                Debug.WriteLine($"[API Error] Timeout on {method} {url}");
+                Log.Information($"[API Error] Timeout on {method} {url}");
                 return new TResponse { IsSuccess = false, ErrorMessage = "Request timed out. Please try again." };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[API Error] Exception on {method} {url}: {ex.Message}");
+                Log.Error($"[API Error] Exception on {method} {url}", ex);
                 return new TResponse { IsSuccess = false, ErrorMessage = $"An unexpected error occurred: {ex.Message}" };
             }
         }
@@ -92,7 +106,7 @@ namespace MamAcars.Services
         private TResponse HandleErrorResponse<TResponse>(System.Net.HttpStatusCode statusCode, string responseContent)
             where TResponse : BaseResponse, new()
         {
-            Debug.WriteLine($"[API Error] {statusCode}: {responseContent}");
+            Log.Information($"[API Error] {statusCode}: {responseContent}");
 
             if (statusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -133,7 +147,7 @@ namespace MamAcars.Services
                 var streamContent = new StreamContent(stream);
                 content.Add(streamContent, "chunkFile", Path.GetFileName(chunkPath));
 
-                Debug.WriteLine($"[API Request] POST v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}\nUploading file: {chunkPath}");
+                Log.Information($"[API Request] POST v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}\nUploading file: {chunkPath}");
 
                 HttpResponseMessage response = await _httpClient.PostAsync(
                     $"v1/flight-report/upload-chunk?flight_report_id={flightReportId}&chunk_id={chunkId}",
@@ -141,7 +155,7 @@ namespace MamAcars.Services
                 );
 
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[API Response] {response.StatusCode} UploadChunk\nResponse: {responseContent}");
+                Log.Information($"[API Response] {response.StatusCode} UploadChunk\nResponse: {responseContent}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -159,7 +173,7 @@ namespace MamAcars.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[API Error] Exception on UploadChunk: {ex.Message}");
+                Log.Error($"[API Error] Exception on UploadChunk", ex);
                 return new UploadChunkResponse { IsSuccess = false, ErrorMessage = $"An unexpected error occurred: {ex.Message}" };
             }
         }

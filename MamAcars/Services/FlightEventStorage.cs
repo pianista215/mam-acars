@@ -1,6 +1,7 @@
 ﻿using FSUIPC;
 using MamAcars.Models;
 using MamAcars.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -145,7 +146,7 @@ namespace MamAcars.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error cleaning FlightsPath {ex.Message}");
+                    Log.Error("Error cleaning FlightPath", ex);
                 }
             }
         }
@@ -160,6 +161,7 @@ namespace MamAcars.Services
 
         public void RegisterFlight(long flightId, string aircraft)
         {
+            Log.Information($"Registering flight {flightId} aircraft {aircraft}");
             using var command = _connection.CreateCommand();
             command.CommandText = @"INSERT INTO flights (id, aircraft) VALUES (@id, @aircraft);";
             command.Parameters.AddWithValue("@id", flightId);
@@ -192,6 +194,7 @@ namespace MamAcars.Services
 
         public void SetComment(long flightId, string comment)
         {
+            Log.Information($"Setting comment in {flightId} : {comment}");
             using var command = _connection.CreateCommand();
             command.CommandText = @"UPDATE flights SET pilot_comment=@pilot_comment WHERE id=@id;";
             command.Parameters.AddWithValue("@id", flightId);
@@ -206,11 +209,13 @@ namespace MamAcars.Services
             command.Parameters.AddWithValue("@id", flightId);
 
             var result = command.ExecuteScalar() as string;
+            Log.Information($"Retrieved comment for flight {flightId}: {result}");
             return result;
         }
 
         public void SetReportId(long flightId, string reportId)
         {
+            Log.Information($"Saving reportId flight {flightId} : {reportId}");
             using var command = _connection.CreateCommand();
             command.CommandText = @"UPDATE flights SET report_id=@report_id WHERE id=@id;";
             command.Parameters.AddWithValue("@id", flightId);
@@ -220,6 +225,7 @@ namespace MamAcars.Services
 
         public void AddChunk(long flightId, int chunk_id, string path)
         {
+            Log.Information($"Adding chunk for flight {flightId}: {chunk_id} - {path}");
             using var command = _connection.CreateCommand();
             command.CommandText = @"INSERT INTO chunks(flight_id, id, path) VALUES (@flight_id, @id, @path);";
             command.Parameters.AddWithValue("@id", flightId);
@@ -230,6 +236,7 @@ namespace MamAcars.Services
 
         public void DeleteChunk(long flightId, int chunk_id)
         {
+            Log.Information($"Deleting chunk for flight {flightId}: {chunk_id}");
             using var command = _connection.CreateCommand();
             command.CommandText = @"DELETE FROM chunks WHERE flight_id = @flight_id AND id = @id;";
             command.Parameters.AddWithValue("@flight_id", flightId);
@@ -254,6 +261,8 @@ namespace MamAcars.Services
                 chunks.Add((id, path));
             }
 
+            Log.Information($"Retrieved pending chunks for flight {flightId}: {String.Join(",", chunks)}");
+
             return chunks;
         }
 
@@ -270,6 +279,7 @@ namespace MamAcars.Services
             command.Parameters.AddWithValue("@id", flightId);
 
             var result = command.ExecuteScalar() as string;
+            Log.Information($"Retrieved last latitude for flight {flightId}: {result}");
             return Double.Parse(result);
         }
 
@@ -286,6 +296,7 @@ namespace MamAcars.Services
             command.Parameters.AddWithValue("@id", flightId);
 
             var result = command.ExecuteScalar() as string;
+            Log.Information($"Retrieved last longitude for flight {flightId}: {result}");
             return Double.Parse(result);
         }
 
@@ -305,6 +316,8 @@ namespace MamAcars.Services
 
             string formattedFirst = firstTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
             string formattedLast = lastTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+
+            Log.Information($"Retrieved start/end time for flight {flightId}: {formattedFirst} - {formattedLast}");
 
             return (formattedFirst, formattedLast);
         } 
@@ -431,11 +444,15 @@ namespace MamAcars.Services
 
         public async Task<string> ExportAndCompressFlightToJson(long flightId)
         {
+            // TODO: Think, maybe memory could be exhausted and it's better to generate and write by steps
             var json = GenerateJson(flightId);
             var jsonFilePath = GetFlightJsonFilePath(flightId);
             var gzipFilePath = GetFlightGzipFilePath(flightId);
+            Log.Information($"Writting json file {flightId}: {jsonFilePath}");
             FileHandler.WriteToFile(jsonFilePath, json);
+            Log.Information($"Compressing json file {flightId}: {jsonFilePath} -> {gzipFilePath}");
             FileHandler.CompressFile(jsonFilePath, gzipFilePath);
+            Log.Information("Compression OK");
             return gzipFilePath;
         }
 
@@ -453,6 +470,7 @@ namespace MamAcars.Services
 
         private string GenerateJson(long flightId)
         {
+            Log.Information($"Generating json for flight {flightId}");
             var flightData = new FlightJsonData
             {
                 FlightId = flightId,

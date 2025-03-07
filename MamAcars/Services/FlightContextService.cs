@@ -1,6 +1,7 @@
 ﻿using FSUIPC;
 using MamAcars.Models;
 using MamAcars.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -54,6 +55,7 @@ namespace MamAcars.Services
             var pendingFlight = _storage.GetPendingFlight();
             this.flightPlan = new FlightPlanInfoResponse();
             this.flightPlan.id = pendingFlight.FlightId;
+            Log.Information($"Loaded pending data for submit. Flight Id: {this.flightPlan.id}");
         }
 
         public void CleanPreviousData()
@@ -195,15 +197,8 @@ namespace MamAcars.Services
             rq.sim_aircraft_name = "TODO";
             rq.report_tool = "TODO";
 
-            Debug.WriteLine("ENVIANDO INFO BASICA");
-            Debug.WriteLine(rq.ToString());
-
             _apiService.SetBearerToken(TokenStorage.GetToken());
-
             var response = await _apiService.SubmitReportAsync(flightPlan.id, rq);
-
-            Debug.WriteLine("RESPUESTA INFO BASICA");
-            Debug.WriteLine(response.ToString());
 
             if (response != null && response.IsSuccess)
             {
@@ -220,14 +215,8 @@ namespace MamAcars.Services
             var chunkPath = chunks[id].path;
             var chunkId = chunks[id].id;
 
-            Debug.WriteLine($"ENVIANDO CHUNK {chunkPath} {chunkId} {submittedReportId}");
-
             _apiService.SetBearerToken(TokenStorage.GetToken());
-
             var response = await _apiService.UploadChunk(submittedReportId, chunkId, chunkPath);
-
-            Debug.WriteLine("RESPUESTA UPLOAD CHUNK");
-            Debug.WriteLine(response.ToString());
 
             // TODO: Retries if something fails
 
