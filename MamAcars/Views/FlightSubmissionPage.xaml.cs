@@ -27,18 +27,24 @@ namespace MamAcars
             _viewModel = new FlightSubmissionViewModel();
             DataContext = _viewModel;
             _viewModel.OnSubmissionCompleted += onSubmissionCompleted;
-            Loaded += async (s, e) => await _viewModel.SubmitFlightReport();
+            Loaded += OnPageLoaded;
         }
 
-        private void NavigateToFlightConfirmedPage()
+        private async void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            Dispatcher.Invoke(() =>
-            {
-                if (NavigationService != null)
-                {
-                    NavigationService.Navigate(new FlightConfirmedPage());
-                }
-            });
+            this.submitFlightReport();
+        }
+
+        private async void submitFlightReport()
+        {
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            await _viewModel.SubmitFlightReport();
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
+        }
+
+        private async void OnRetryClicked(object sender, RoutedEventArgs e)
+        {
+            this.submitFlightReport();
         }
     }
 }

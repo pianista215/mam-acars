@@ -34,6 +34,7 @@ namespace MamAcars
             _viewModel.OnLoginSuccess += onLoginSuccess;
             _onLoginSuccess = onLoginSuccess;
             _onPendingSubmission = onPendingSubmission;
+            LicenseTextbox.Focus();
         }
 
         private void disableComponents()

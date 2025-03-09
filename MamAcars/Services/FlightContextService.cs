@@ -205,8 +205,6 @@ namespace MamAcars.Services
                 this.submittedReportId = response.flight_report_id;
             }
 
-            // TODO: Retries if something fails
-
             return response;
         }
 
@@ -217,8 +215,6 @@ namespace MamAcars.Services
 
             _apiService.SetBearerToken(TokenStorage.GetToken());
             var response = await _apiService.UploadChunk(submittedReportId, chunkId, chunkPath);
-
-            // TODO: Retries if something fails
 
             return response;
         }
