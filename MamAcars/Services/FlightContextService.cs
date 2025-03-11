@@ -193,7 +193,7 @@ namespace MamAcars.Services
             }
 
             // TODO
-            rq.network = "TODO";
+            rq.network = MamUtils.GetOnlineNetwork();
             rq.sim_aircraft_name = "TODO";
             rq.report_tool = MamUtils.GetAppNameAndVersion();
 

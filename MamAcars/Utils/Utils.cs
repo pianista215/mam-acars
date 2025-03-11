@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -46,6 +47,26 @@ namespace MamAcars.Utils
         public static double DegreesToRadians(double degrees)
         {
             return degrees * Math.PI / 180.0;
+        }
+
+        public static string GetOnlineNetwork()
+        {
+            var processes = Process.GetProcesses()
+            .Select(p => p.ProcessName.ToLower())
+            .ToList();
+
+            if (processes.Contains("altitudex") || processes.Contains("pilotui"))
+            {
+                return "IVAO";
+            }
+            else if (processes.Contains("vpilot") || processes.Contains("xpilot"))
+            {
+                return "VATSIM";
+            }
+            else
+            {
+                return "UNKNOWN";
+            }
         }
     }
 }
