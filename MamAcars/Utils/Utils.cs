@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,6 +9,16 @@ namespace MamAcars.Utils
 {
     public static class MamUtils
     {
+
+        public static string GetAppNameAndVersion()
+        {
+            string appName = Assembly.GetExecutingAssembly().GetName().Name ?? "MamAcars";
+            string version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "Unknown";
+
+            return $"{appName} {version}";
+        }
 
         private const double EarthRadiusKm = 6371.0;
 

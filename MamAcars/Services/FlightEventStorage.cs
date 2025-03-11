@@ -366,8 +366,6 @@ namespace MamAcars.Services
         {
             var changes = new List<KeyValuePair<string, object>>();
 
-            // TODO: UNAI RETHINK THAT BECAUSE WE NEED TO TRY TO GET A LOT OF DATA NEAR TERRAIN, BUT LESS HIGHER
-
             if (previous == null || previous.onGround != current.onGround)
             {
                 // If "onGround" changes, record all values

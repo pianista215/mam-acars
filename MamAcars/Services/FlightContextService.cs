@@ -195,7 +195,7 @@ namespace MamAcars.Services
             // TODO
             rq.network = "TODO";
             rq.sim_aircraft_name = "TODO";
-            rq.report_tool = "TODO";
+            rq.report_tool = MamUtils.GetAppNameAndVersion();
 
             _apiService.SetBearerToken(TokenStorage.GetToken());
             var response = await _apiService.SubmitReportAsync(flightPlan.id, rq);

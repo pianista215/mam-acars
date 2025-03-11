@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using FSUIPC;
+using MamAcars.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -33,10 +35,13 @@ namespace MamAcars.Services
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
+        private string acarsClientVersion = MamUtils.GetAppNameAndVersion();
+
         private void SetDefaultHeaders()
         {
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.Add("X-App-Name", acarsClientVersion);
         }
 
         private async Task<TResponse> SendRequestAsync<TRequest, TResponse>(string url, HttpMethod method, TRequest? requestData = null)
