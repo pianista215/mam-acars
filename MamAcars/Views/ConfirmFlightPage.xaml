@@ -35,6 +35,7 @@
                  VerticalAlignment="Top" 
                  HorizontalAlignment="Center" 
                  Height="150" 
+                 MaxLength="400"
                  />
 
         <Button Content="Send Flight" 

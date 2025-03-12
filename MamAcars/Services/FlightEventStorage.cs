@@ -68,6 +68,7 @@ namespace MamAcars.Services
             string createFlightsTable = @"CREATE TABLE IF NOT EXISTS flights (
             id INTEGER PRIMARY KEY,
             aircraft TEXT NOT NULL,
+            network TEXT NOT NULL,
             pilot_comment TEXT DEFAULT NULL,
             report_id TEXT DEFAULT NULL
         );";
@@ -155,17 +156,19 @@ namespace MamAcars.Services
         {
             public long FlightId { get; set; }
             public string Aircraft { get; set; }
+            public string Network { get; set; }
             public string? PilotComment { get; set; }
             public string? ReportId { get; set; }
         }
 
-        public void RegisterFlight(long flightId, string aircraft)
+        public void RegisterFlight(long flightId, string aircraft, string network)
         {
-            Log.Information($"Registering flight {flightId} aircraft {aircraft}");
+            Log.Information($"Registering flight {flightId} aircraft {aircraft} network {network}");
             using var command = _connection.CreateCommand();
-            command.CommandText = @"INSERT INTO flights (id, aircraft) VALUES (@id, @aircraft);";
+            command.CommandText = @"INSERT INTO flights (id, aircraft, network) VALUES (@id, @aircraft, @network);";
             command.Parameters.AddWithValue("@id", flightId);
             command.Parameters.AddWithValue("@aircraft", aircraft);
+            command.Parameters.AddWithValue("@network", network);
             command.ExecuteNonQuery();
 
             _previousState = null; // Reset the state for a new flight
@@ -174,7 +177,7 @@ namespace MamAcars.Services
         public StoredFlightData GetPendingFlight()
         {
             using var command = _connection.CreateCommand();
-            command.CommandText = "SELECT id, aircraft, pilot_comment, report_id FROM flights WHERE pilot_comment IS NOT NULL LIMIT 1";
+            command.CommandText = "SELECT id, aircraft, network, pilot_comment, report_id FROM flights WHERE pilot_comment IS NOT NULL LIMIT 1";
             using var reader = command.ExecuteReader();
 
             if (reader.Read())
@@ -183,8 +186,9 @@ namespace MamAcars.Services
                 {
                     FlightId = reader.GetInt64(0),
                     Aircraft = reader.GetString(1),
-                    PilotComment = reader.GetString(2),
-                    ReportId = reader.IsDBNull(3) ? null : reader.GetString(3)
+                    Network = reader.GetString(2),
+                    PilotComment = reader.GetString(3),
+                    ReportId = reader.IsDBNull(4) ? null : reader.GetString(3)
                 };
             } else
             {
