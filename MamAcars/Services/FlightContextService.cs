@@ -176,6 +176,12 @@ namespace MamAcars.Services
             rq.last_position_lat = _storage.GetLastLatitude(flightPlan.id);
             rq.last_position_lon = _storage.GetLastLongitude(flightPlan.id);
 
+            var basicData = _storage.GetPendingFlight();
+
+            rq.network = basicData.Network;
+            rq.sim_aircraft_name = basicData.Aircraft;
+            rq.report_tool = MamUtils.GetAppNameAndVersion();
+
             var (start, end) = _storage.GetStartAndEndTime(flightPlan.id);
 
             rq.start_time = start;
@@ -191,11 +197,6 @@ namespace MamAcars.Services
                 chunk.sha256sum = info.sha256sum;
                 rq.chunks[i] = chunk;
             }
-
-            // TODO
-            rq.network = "TODO";
-            rq.sim_aircraft_name = "TODO";
-            rq.report_tool = "TODO";
 
             _apiService.SetBearerToken(TokenStorage.GetToken());
             var response = await _apiService.SubmitReportAsync(flightPlan.id, rq);

@@ -48,6 +48,10 @@ namespace MamAcars.Services
         private Offset<short> magneticVariationOffset = new Offset<short>(BASIC_OFFSET, 0x2A0);
         private Offset<int> groundSpeedOffset = new Offset<int>(BASIC_OFFSET, 0x02B4);
 
+        const string AIRCRAFT_INFO = "AircraftInfo";
+        private Offset<string> tailNoOffset = new Offset<string>(AIRCRAFT_INFO, 0x313C, 12);
+        private Offset<string> aircraftTypeOffset = new Offset<string>(AIRCRAFT_INFO, 0x3160, 24);
+
 
         public void startLookingSimulatorAndAircraftLocation(double airportLatitude, double airportLongitude)
         {
@@ -135,6 +139,13 @@ namespace MamAcars.Services
             }
         }
 
+        private string getAircraftInfo()
+        {
+            FSUIPCConnection.Process(AIRCRAFT_INFO);
+            string result = (aircraftTypeOffset.Value.Trim() + " | " + tailNoOffset.Value.Trim());
+            return result.Length > 50 ? result.Substring(0, 50) : result;
+        }
+
         public class ExpectedLocation
         {
             public double AirportLatitude { get; set; }
@@ -144,7 +155,7 @@ namespace MamAcars.Services
         public void startSavingBlackBox(long flightPlanId)
         {
             Log.Information($"Start saving blackbox fplId {flightPlanId}");
-            _storage.RegisterFlight(flightPlanId, "xplane_aircraft_xxx");
+            _storage.RegisterFlight(flightPlanId, this.getAircraftInfo(), MamUtils.GetOnlineNetwork()) ;
             _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
         }
 
