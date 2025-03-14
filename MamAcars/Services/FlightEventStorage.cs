@@ -370,16 +370,33 @@ namespace MamAcars.Services
         {
             var changes = new List<KeyValuePair<string, object>>();
 
-            if (previous == null || previous.onGround != current.onGround)
+            // TODO: Log some changes if time from last change is big???
+
+            // TODO: LAs comprobaciones de previous del final sobran todas creo (si entra por aqui ya se hace un return)
+
+            if (previous == null || previous.OnGround != current.OnGround)
             {
                 // If "onGround" changes, record all values
                 changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
                 changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
-                changes.Add(new KeyValuePair<string, object>("onGround", current.onGround));
+                changes.Add(new KeyValuePair<string, object>("onGround", current.OnGround));
                 changes.Add(new KeyValuePair<string, object>("Altitude", current.Altitude));
                 changes.Add(new KeyValuePair<string, object>("AGLAltitude", current.AGLAltitude));
                 changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
                 changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
+                changes.Add(new KeyValuePair<string, object>("IASKnots", current.IasKnots));
+                changes.Add(new KeyValuePair<string, object>("QNHSet", current.QnhSet));
+
+                changes.Add(new KeyValuePair<string, object>("Flaps", current.FlapsPercentage));
+                string gearUp = current.GearUp ? "Up" : "Down";
+                changes.Add(new KeyValuePair<string, object>("Gear", gearUp));
+
+                for (int i = 0; i < current.EnginesStarted.Length; i++)
+                {
+                    string engineState = current.EnginesStarted[i] ? "On" : "Off";
+                    changes.Add(new KeyValuePair<string, object>($"Engine {i + 1}", engineState));
+                }
+
                 return changes;
             }
 
@@ -405,7 +422,7 @@ namespace MamAcars.Services
                 changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
             }
 
-            if (previous == null || Math.Abs(previous.GroundSpeedKnots - current.GroundSpeedKnots) > 20)
+            if (previous == null || Math.Abs(previous.IasKnots - current.IasKnots) > 20)
             {
                 if (previous == null || previous.Latitude != current.Latitude)
                     changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
@@ -414,6 +431,33 @@ namespace MamAcars.Services
                     changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
 
                 changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
+                changes.Add(new KeyValuePair<string, object>("IASKnots", current.IasKnots));
+            }
+
+            if (previous == null || previous.QnhSet != current.QnhSet)
+            {
+                changes.Add(new KeyValuePair<string, object>("QNHSet", current.QnhSet));
+            }
+
+            if (previous == null || previous.FlapsPercentage != current.FlapsPercentage)
+            {
+                changes.Add(new KeyValuePair<string, object>("Flaps", current.FlapsPercentage));
+            }
+
+            if(previous == null || previous.GearUp != current.GearUp)
+            {
+                string gearUp = current.GearUp ? "Up" : "Down";
+                changes.Add(new KeyValuePair<string, object>("Gear", gearUp));
+            }
+            
+
+            for (int i = 0; i < current.EnginesStarted.Length; i++)
+            {
+                if (previous.EnginesStarted[i] != current.EnginesStarted[i])
+                {
+                    string engineState = current.EnginesStarted[i] ? "On" : "Off";
+                    changes.Add(new KeyValuePair<string, object>($"Engine {i + 1}", engineState));
+                }
             }
 
             return changes;
