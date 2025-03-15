@@ -12,8 +12,13 @@ namespace MamAcars.Models
         public double Longitude { get; set; }
         public bool OnGround { get; set; }
         public int Altitude { get; set; }
-
         public int AGLAltitude { get; set; }
+
+        public int Altimeter { get; set; }
+
+        public int VerticalSpeedFPM { get; set; }
+
+        public int Squawk { get; set; }
 
         public int Heading { get; set; }
 
@@ -33,9 +38,11 @@ namespace MamAcars.Models
 
         public override string ToString()
         {
-            // TODO: UNAI ACTUALIZA
-            return $"Latitude: {Latitude}, Longitude: {Longitude}, OnGround: {OnGround}, Altitude: {Altitude}, " +
-                   $"Heading: {Heading}, GroundSpeedKnots: {GroundSpeedKnots}, Timestamp: {Timestamp:O}";
+            return $"Latitude: {Latitude}, Longitude: {Longitude}, OnGround: {OnGround}, Altitude: {Altitude}, AGLAltitude: {AGLAltitude}, " +
+                   $"Altimeter: {Altimeter}, VerticalSpeedFPM: {VerticalSpeedFPM}, Squawk: {Squawk}, Heading: {Heading}, " +
+                   $"GroundSpeedKnots: {GroundSpeedKnots}, IasKnots: {IasKnots}, QnhSet: {QnhSet}, Timestamp: {Timestamp:O}, " +
+                   $"EnginesStarted: [{string.Join(", ", EnginesStarted)}], FlapsPercentage: {FlapsPercentage}, GearUp: {GearUp}, " +
+                   $"AircraftFuelKg: {AircraftFuelKg}";
         }
     }
 }

@@ -395,6 +395,24 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("AGLAltitude", aglAltitude);
         }
 
+        private KeyValuePair<string, object> updateAltimeter(int altimeter)
+        {
+            _lastLoggedVars.Altimeter = altimeter;
+            return new KeyValuePair<string, object>("Altimeter", altimeter);
+        }
+
+        private KeyValuePair<string, object> updateVerticalSpeed(int verticalSpeedFpm)
+        {
+            _lastLoggedVars.VerticalSpeedFPM = verticalSpeedFpm;
+            return new KeyValuePair<string, object>("VSFpm", verticalSpeedFpm);
+        }
+
+        private KeyValuePair<string, object> updateSquawk(int squawk)
+        {
+            _lastLoggedVars.Squawk = squawk;
+            return new KeyValuePair<string, object>("Squawk", squawk);
+        }
+
         private KeyValuePair<string, object> updateHeading(int heading)
         {
             _lastLoggedVars.Heading = heading;
@@ -478,6 +496,8 @@ namespace MamAcars.Services
                 changes.Add(updateOnGround(current.OnGround));
                 changes.Add(updateAltitude(current.Altitude));
                 changes.Add(updateAGLAltitude(current.AGLAltitude));
+                changes.Add(updateAltimeter(current.Altimeter));
+                changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
                 changes.Add(updateHeading(current.Heading));
                 changes.Add(updateGSKnots(current.GroundSpeedKnots));
                 changes.Add(updateIASKnots(current.IasKnots));
@@ -485,6 +505,7 @@ namespace MamAcars.Services
                 changes.Add(updateFlaps(current.FlapsPercentage));
                 changes.Add(updateGear(current.GearUp));
                 changes.Add(updateFuelKg(current.AircraftFuelKg));
+                changes.Add(updateSquawk(current.Squawk));
 
                 var enginesChanges = updateEnginesStatus(current.EnginesStarted);
                 foreach (var engineChange in enginesChanges)
@@ -496,12 +517,14 @@ namespace MamAcars.Services
             }
             else
             {
-                if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800)
+                if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800 || Math.Abs(_lastLoggedVars.VerticalSpeedFPM - current.VerticalSpeedFPM) > 400)
                 {
                     changes.Add(updateLatitude(current.Latitude));
                     changes.Add(updateLongitude(current.Longitude));
                     changes.Add(updateAltitude(current.Altitude));
                     changes.Add(updateAGLAltitude(current.AGLAltitude));
+                    changes.Add(updateAltimeter(current.Altimeter));
+                    changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
                 }
 
                 if (Math.Abs(_lastLoggedVars.Heading - current.Heading) > 25)
@@ -525,6 +548,7 @@ namespace MamAcars.Services
                     changes.Add(updateLongitude(current.Longitude));
                     changes.Add(updateAltitude(current.Altitude));
                     changes.Add(updateAGLAltitude(current.AGLAltitude));
+                    changes.Add(updateAltimeter(current.Altimeter));
                     changes.Add(updateQNHSet(current.QnhSet));
                 }
 
@@ -540,6 +564,11 @@ namespace MamAcars.Services
                     changes.Add(updateLatitude(current.Latitude));
                     changes.Add(updateLongitude(current.Longitude));
                     changes.Add(updateGear(current.GearUp));
+                }
+
+                if(_lastLoggedVars.Squawk != current.Squawk)
+                {
+                    changes.Add(updateSquawk(current.Squawk));
                 }
 
                 for (int i = 0; i < current.EnginesStarted.Length; i++)
