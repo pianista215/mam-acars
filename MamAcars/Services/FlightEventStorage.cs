@@ -481,15 +481,28 @@ namespace MamAcars.Services
             return result;
         }
 
+        private bool ShouldLogFullState(DateTime now, BlackBoxBasicInformation current)
+        {
+            if (_lastFullWritten == null) return true;
+
+            if (_lastLoggedVars.OnGround != current.OnGround) return true;
+
+            var minutesSinceLastLog = (now - _lastFullWritten.Value).TotalMinutes;
+            if (minutesSinceLastLog >= 1) return true;
+
+            var secondsSinceLastLog = (now - _lastFullWritten.Value).TotalSeconds;
+            if (!current.OnGround && current.AGLAltitude <= 1000 && secondsSinceLastLog >= 10) return true;
+
+            return false;
+        }
+
         private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation current)
         {
             var changes = new List<KeyValuePair<string, object>>();
 
             var now = DateTime.UtcNow;
 
-            // TODO: UNAI Analize if AGL <= 1000 -> track every 10 seconds
-
-            if (_lastFullWritten == null || (now - this._lastFullWritten.Value).TotalMinutes >= 1 || _lastLoggedVars.OnGround != current.OnGround)
+            if (this.ShouldLogFullState(now, current))
             {
                 changes.Add(updateLatitude(current.Latitude));
                 changes.Add(updateLongitude(current.Longitude));
@@ -512,6 +525,8 @@ namespace MamAcars.Services
                 {
                     changes.Add(engineChange);
                 }
+
+                //Log.Information($"NEW STATUS: {_lastLoggedVars}");
 
                 this._lastFullWritten = now;
             }
