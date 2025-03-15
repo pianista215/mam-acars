@@ -487,7 +487,7 @@ namespace MamAcars.Services
 
             var now = DateTime.UtcNow;
 
-            // TODO: UNAI PENDING FLAPS AND VS
+            // TODO: UNAI Analize if AGL <= 1000 -> track every 10 seconds
 
             if (_lastFullWritten == null || (now - this._lastFullWritten.Value).TotalMinutes >= 1 || _lastLoggedVars.OnGround != current.OnGround)
             {
