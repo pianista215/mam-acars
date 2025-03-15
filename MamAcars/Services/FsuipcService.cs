@@ -58,6 +58,8 @@ namespace MamAcars.Services
         private Offset<uint> flapsControlOffset = new Offset<uint>(AIRCRAFT_INFO, 0x0BDC);
         private Offset<uint> gearOffset = new Offset<uint>(AIRCRAFT_INFO, 0x0BE8);
 
+        private PayloadServices payloadServices;
+
         private void initializeEngineOffsets(short numberOfEngines)
         {
             Log.Information($"Detected number of engines: {numberOfEngines}");
@@ -172,6 +174,21 @@ namespace MamAcars.Services
             return result.Length > 50 ? result.Substring(0, 50) : result;
         }
 
+        private void ensurePayloadUpdated()
+        {
+            if (payloadServices == null)
+            {
+                this.payloadServices = FSUIPCConnection.PayloadServices;
+            }
+            payloadServices.RefreshData();
+        }
+
+        private double getAircraftFuelKg()
+        {
+            ensurePayloadUpdated();
+            return payloadServices.FuelWeightKgs;
+        }
+
         public class ExpectedLocation
         {
             public double AirportLatitude { get; set; }
@@ -214,7 +231,7 @@ namespace MamAcars.Services
 
                 var heading = (double) headingOffset.Value * 360.0 / (65536.0 * 65536.0);
                 var magneticVariation = (double) magneticVariationOffset.Value * 360.0 / 65536.0;
-                blackBoxBasicInformation.Heading = (int) (heading - magneticVariation) % 360;
+                blackBoxBasicInformation.Heading = ((int)(heading - magneticVariation) % 360 + 360) % 360;
 
                 blackBoxBasicInformation.GroundSpeedKnots = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d);
                 blackBoxBasicInformation.IasKnots = (int)(iasOffset.Value / 128d);
@@ -230,7 +247,7 @@ namespace MamAcars.Services
                     blackBoxBasicInformation.EnginesStarted[i] = engineOffsets[i].Value == 1;
                 }
 
-                // TODO: UNAI FALTA EL FUEL
+                blackBoxBasicInformation.AircraftFuelKg = getAircraftFuelKg();
 
                 var flightId = state as long?;
 

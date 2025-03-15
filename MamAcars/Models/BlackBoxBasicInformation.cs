@@ -29,6 +29,8 @@ namespace MamAcars.Models
 
         public bool GearUp { get; set; }
 
+        public double AircraftFuelKg { get; set; }
+
         public override string ToString()
         {
             // TODO: UNAI ACTUALIZA
