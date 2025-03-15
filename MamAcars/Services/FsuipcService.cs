@@ -39,6 +39,7 @@ namespace MamAcars.Services
 
         private const string BASIC_OFFSET = "Basic";
 
+        // Positional or environmental
         private Offset<FsLongitude> longitudeOffset = new Offset<FsLongitude>(BASIC_OFFSET, 0x0568, 8);
         private Offset<FsLatitude> latitudeOffset = new Offset<FsLatitude>(BASIC_OFFSET, 0x0560, 8);
         private Offset<ushort> onGroundOffset = new Offset<ushort>(BASIC_OFFSET, 0x0366);
@@ -48,9 +49,52 @@ namespace MamAcars.Services
         private Offset<short> magneticVariationOffset = new Offset<short>(BASIC_OFFSET, 0x2A0);
         private Offset<int> groundSpeedOffset = new Offset<int>(BASIC_OFFSET, 0x02B4);
 
+        // Instruments
+        private Offset<uint> iasOffset = new Offset<uint>(BASIC_OFFSET, 0x02BC);
+        private Offset<short> qnhSetOffset = new Offset<short>(BASIC_OFFSET, 0x0330);
+        private Offset<int> altimeterOffset = new Offset<int>(BASIC_OFFSET, 0x3324);
+        private Offset<int> verticalSpeedFpmOffset = new Offset<int>(BASIC_OFFSET, 0x02C8);
+        private Offset<short> squawkOffset = new Offset<short>(BASIC_OFFSET, 0x0354);
+
+        private int GetSquawkCode()
+        {
+            short rawValue = squawkOffset.Value;
+            int digit1 = (rawValue >> 12) & 0xF;
+            int digit2 = (rawValue >> 8) & 0xF;
+            int digit3 = (rawValue >> 4) & 0xF;
+            int digit4 = (rawValue >> 0) & 0xF;
+
+            return digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
+        }
+
+        // Engines
+        private Offset<ushort>[] engineOffsets;
+
+        //Surfaces
+        private Offset<uint> flapsControlOffset = new Offset<uint>(BASIC_OFFSET, 0x0BDC);
+        private Offset<uint> gearOffset = new Offset<uint>(BASIC_OFFSET, 0x0BE8);
+
+        private PayloadServices payloadServices;
+
+        private void initializeEngineOffsets(short numberOfEngines)
+        {
+            Log.Information($"Detected number of engines: {numberOfEngines}");
+            this.engineOffsets = new Offset<ushort>[]
+           {
+                new Offset<ushort>(BASIC_OFFSET, 0x0894),
+                new Offset<ushort>(BASIC_OFFSET, 0x092C),
+                new Offset<ushort>(BASIC_OFFSET, 0x09C4),
+                new Offset<ushort>(BASIC_OFFSET, 0x0A5C)
+           };
+
+            this.engineOffsets = this.engineOffsets.Take(numberOfEngines).ToArray();
+        }
+
+        //Aircraft Info
         const string AIRCRAFT_INFO = "AircraftInfo";
         private Offset<string> tailNoOffset = new Offset<string>(AIRCRAFT_INFO, 0x313C, 12);
         private Offset<string> aircraftTypeOffset = new Offset<string>(AIRCRAFT_INFO, 0x3160, 24);
+        private Offset<short> planeEnginesOffset = new Offset<short>(AIRCRAFT_INFO, 0x0AEC);
 
 
         public void startLookingSimulatorAndAircraftLocation(double airportLatitude, double airportLongitude)
@@ -146,6 +190,21 @@ namespace MamAcars.Services
             return result.Length > 50 ? result.Substring(0, 50) : result;
         }
 
+        private void ensurePayloadUpdated()
+        {
+            if (payloadServices == null)
+            {
+                this.payloadServices = FSUIPCConnection.PayloadServices;
+            }
+            payloadServices.RefreshData();
+        }
+
+        private double getAircraftFuelKg()
+        {
+            ensurePayloadUpdated();
+            return payloadServices.FuelWeightKgs;
+        }
+
         public class ExpectedLocation
         {
             public double AirportLatitude { get; set; }
@@ -155,7 +214,8 @@ namespace MamAcars.Services
         public void startSavingBlackBox(long flightPlanId)
         {
             Log.Information($"Start saving blackbox fplId {flightPlanId}");
-            _storage.RegisterFlight(flightPlanId, this.getAircraftInfo(), MamUtils.GetOnlineNetwork()) ;
+            _storage.RegisterFlight(flightPlanId, this.getAircraftInfo(), MamUtils.GetOnlineNetwork());
+            this.initializeEngineOffsets(planeEnginesOffset.Value);
             _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
         }
 
@@ -179,17 +239,37 @@ namespace MamAcars.Services
                 BlackBoxBasicInformation blackBoxBasicInformation = new BlackBoxBasicInformation();
                 blackBoxBasicInformation.Longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5);
                 blackBoxBasicInformation.Latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5);
-                blackBoxBasicInformation.onGround = onGroundOffset.Value > 0;
-                blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0));
-                int groundAltitudeFeets = (int)((double)groundAltitudeOffset.Value / 256.0 * MamUtils.METER_TO_FEETS);
+                blackBoxBasicInformation.OnGround = onGroundOffset.Value > 0;
 
+                blackBoxBasicInformation.Altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0));
+                int groundAltitudeFeets = (int)(groundAltitudeOffset.Value / 256.0 * MamUtils.METER_TO_FEETS);
                 blackBoxBasicInformation.AGLAltitude = blackBoxBasicInformation.Altitude - groundAltitudeFeets;
+
+                blackBoxBasicInformation.Altimeter = altimeterOffset.Value;
+
+                blackBoxBasicInformation.VerticalSpeedFPM = (int)(verticalSpeedFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
+
+                blackBoxBasicInformation.Squawk = this.GetSquawkCode();
 
                 var heading = (double) headingOffset.Value * 360.0 / (65536.0 * 65536.0);
                 var magneticVariation = (double) magneticVariationOffset.Value * 360.0 / 65536.0;
-                blackBoxBasicInformation.Heading = (int) (heading - magneticVariation) % 360;
+                blackBoxBasicInformation.Heading = ((int)(heading - magneticVariation) % 360 + 360) % 360;
 
                 blackBoxBasicInformation.GroundSpeedKnots = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d);
+                blackBoxBasicInformation.IasKnots = (int)(iasOffset.Value / 128d);
+
+                blackBoxBasicInformation.QnhSet = qnhSetOffset.Value / 16;
+
+                blackBoxBasicInformation.FlapsPercentage = (int)(flapsControlOffset.Value / 16383d * 100d);
+                blackBoxBasicInformation.GearUp = gearOffset.Value == 0;
+
+                blackBoxBasicInformation.EnginesStarted = new bool[engineOffsets.Length];
+                for (int i = 0; i < this.engineOffsets.Length; i++)
+                {
+                    blackBoxBasicInformation.EnginesStarted[i] = engineOffsets[i].Value == 1;
+                }
+
+                blackBoxBasicInformation.AircraftFuelKg = this.getAircraftFuelKg();
 
                 var flightId = state as long?;
 

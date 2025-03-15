@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Xml.Linq;
@@ -23,7 +24,9 @@ namespace MamAcars.Services
         private readonly Timer _batchWriteTimer;
         private readonly object _lock = new();
 
-        private BlackBoxBasicInformation _previousState;
+        // The entries of that BlackboxInformation could be from different timestamps
+        private BlackBoxBasicInformation _lastLoggedVars = new BlackBoxBasicInformation();
+        private DateTime? _lastFullWritten = null;
 
         private static readonly string FilePath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "sqlite.dat");
@@ -170,8 +173,6 @@ namespace MamAcars.Services
             command.Parameters.AddWithValue("@aircraft", aircraft);
             command.Parameters.AddWithValue("@network", network);
             command.ExecuteNonQuery();
-
-            _previousState = null; // Reset the state for a new flight
         }
 
         public StoredFlightData GetPendingFlight()
@@ -328,7 +329,7 @@ namespace MamAcars.Services
 
         public void RecordEvent(long? flightId, BlackBoxBasicInformation currentState)
         {
-            var changes = GetChanges(_previousState, currentState);
+            var changes = GetChanges(currentState);
 
             if (changes.Any())
             {
@@ -361,61 +362,239 @@ namespace MamAcars.Services
 
                     transaction.Commit();
                 }
-
-                _previousState = currentState;
             }
         }
 
-        private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation previous, BlackBoxBasicInformation current)
+        private KeyValuePair<string, object> updateLatitude(double latitude)
+        {
+            _lastLoggedVars.Latitude = latitude;
+            return new KeyValuePair<string, object>("Latitude", latitude);
+        }
+
+        private KeyValuePair<string, object> updateLongitude(double longitude)
+        {
+            _lastLoggedVars.Longitude = longitude;
+            return new KeyValuePair<string, object>("Longitude", longitude);
+        }
+
+        private KeyValuePair<string, object> updateOnGround(bool onGround)
+        {
+            _lastLoggedVars.OnGround = onGround;
+            return new KeyValuePair<string, object>("onGround", onGround);
+        }
+
+        private KeyValuePair<string, object> updateAltitude(int altitude)
+        {
+            _lastLoggedVars.Altitude = altitude;
+            return new KeyValuePair<string, object>("Altitude", altitude);
+        }
+
+        private KeyValuePair<string, object> updateAGLAltitude(int aglAltitude)
+        {
+            _lastLoggedVars.AGLAltitude = aglAltitude;
+            return new KeyValuePair<string, object>("AGLAltitude", aglAltitude);
+        }
+
+        private KeyValuePair<string, object> updateAltimeter(int altimeter)
+        {
+            _lastLoggedVars.Altimeter = altimeter;
+            return new KeyValuePair<string, object>("Altimeter", altimeter);
+        }
+
+        private KeyValuePair<string, object> updateVerticalSpeed(int verticalSpeedFpm)
+        {
+            _lastLoggedVars.VerticalSpeedFPM = verticalSpeedFpm;
+            return new KeyValuePair<string, object>("VSFpm", verticalSpeedFpm);
+        }
+
+        private KeyValuePair<string, object> updateSquawk(int squawk)
+        {
+            _lastLoggedVars.Squawk = squawk;
+            return new KeyValuePair<string, object>("Squawk", squawk);
+        }
+
+        private KeyValuePair<string, object> updateHeading(int heading)
+        {
+            _lastLoggedVars.Heading = heading;
+            return new KeyValuePair<string, object>("Heading", heading);
+        }
+
+        private KeyValuePair<string, object> updateGSKnots(int gsKnots)
+        {
+            _lastLoggedVars.GroundSpeedKnots = gsKnots;
+            return new KeyValuePair<string, object>("GSKnots", gsKnots);
+        }
+
+        private KeyValuePair<string, object> updateIASKnots(int iasKnots)
+        {
+            _lastLoggedVars.IasKnots = iasKnots;
+            return new KeyValuePair<string, object>("IASKnots", iasKnots);
+        }
+
+        private KeyValuePair<string, object> updateQNHSet(int qnh)
+        {
+            _lastLoggedVars.QnhSet = qnh;
+            return new KeyValuePair<string, object>("QNHSet", qnh);
+        }
+
+        private KeyValuePair<string, object> updateFlaps(int flaps)
+        {
+            _lastLoggedVars.FlapsPercentage = flaps;
+            return new KeyValuePair<string, object>("Flaps", flaps);
+        }
+
+        private KeyValuePair<string, object> updateGear(bool gearUp)
+        {
+            _lastLoggedVars.GearUp = gearUp;
+
+            string value = gearUp ? "Up" : "Down";
+            return new KeyValuePair<string, object>("Gear", value);
+        }
+
+        private KeyValuePair<string, object> updateFuelKg(double fuelKg)
+        {
+            _lastLoggedVars.AircraftFuelKg = fuelKg;
+            return new KeyValuePair<string, object>("FuelKg", fuelKg);
+        }
+
+        private KeyValuePair<string, object> updateEngineStatus(bool engine, int enginePos)
+        {
+            _lastLoggedVars.EnginesStarted[enginePos] = engine;
+            string engineState = engine ? "On" : "Off";
+            return new KeyValuePair<string, object>($"Engine {enginePos + 1}", engineState);
+        }
+
+        private KeyValuePair<string, object>[] updateEnginesStatus(bool[] engines)
+        {
+            var result = new KeyValuePair<string, object>[engines.Length];
+
+            if(_lastLoggedVars.EnginesStarted == null)
+            {
+                _lastLoggedVars.EnginesStarted = new bool[engines.Length];
+            }
+
+            for (int i = 0; i < engines.Length; i++)
+            {
+                result[i] = updateEngineStatus(engines[i], i);
+            }
+
+            return result;
+        }
+
+        private bool ShouldLogFullState(DateTime now, BlackBoxBasicInformation current)
+        {
+            if (_lastFullWritten == null) return true;
+
+            if (_lastLoggedVars.OnGround != current.OnGround) return true;
+
+            var minutesSinceLastLog = (now - _lastFullWritten.Value).TotalMinutes;
+            if (minutesSinceLastLog >= 1) return true;
+
+            var secondsSinceLastLog = (now - _lastFullWritten.Value).TotalSeconds;
+            if (!current.OnGround && current.AGLAltitude <= 1000 && secondsSinceLastLog >= 10) return true;
+
+            return false;
+        }
+
+        private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation current)
         {
             var changes = new List<KeyValuePair<string, object>>();
 
-            if (previous == null || previous.onGround != current.onGround)
+            var now = DateTime.UtcNow;
+
+            if (this.ShouldLogFullState(now, current))
             {
-                // If "onGround" changes, record all values
-                changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
-                changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
-                changes.Add(new KeyValuePair<string, object>("onGround", current.onGround));
-                changes.Add(new KeyValuePair<string, object>("Altitude", current.Altitude));
-                changes.Add(new KeyValuePair<string, object>("AGLAltitude", current.AGLAltitude));
-                changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
-                changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
-                return changes;
-            }
+                changes.Add(updateLatitude(current.Latitude));
+                changes.Add(updateLongitude(current.Longitude));
+                changes.Add(updateOnGround(current.OnGround));
+                changes.Add(updateAltitude(current.Altitude));
+                changes.Add(updateAGLAltitude(current.AGLAltitude));
+                changes.Add(updateAltimeter(current.Altimeter));
+                changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
+                changes.Add(updateHeading(current.Heading));
+                changes.Add(updateGSKnots(current.GroundSpeedKnots));
+                changes.Add(updateIASKnots(current.IasKnots));
+                changes.Add(updateQNHSet(current.QnhSet));
+                changes.Add(updateFlaps(current.FlapsPercentage));
+                changes.Add(updateGear(current.GearUp));
+                changes.Add(updateFuelKg(current.AircraftFuelKg));
+                changes.Add(updateSquawk(current.Squawk));
 
-            if (previous == null || Math.Abs(previous.Altitude - current.Altitude) > 800)
+                var enginesChanges = updateEnginesStatus(current.EnginesStarted);
+                foreach (var engineChange in enginesChanges)
+                {
+                    changes.Add(engineChange);
+                }
+
+                //Log.Information($"NEW STATUS: {_lastLoggedVars}");
+
+                this._lastFullWritten = now;
+            }
+            else
             {
-                if (previous == null || previous.Latitude != current.Latitude)
-                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
+                if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800 || Math.Abs(_lastLoggedVars.VerticalSpeedFPM - current.VerticalSpeedFPM) > 400)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateAltitude(current.Altitude));
+                    changes.Add(updateAGLAltitude(current.AGLAltitude));
+                    changes.Add(updateAltimeter(current.Altimeter));
+                    changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
+                }
 
-                if (previous == null || previous.Longitude != current.Longitude)
-                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
+                if (Math.Abs(_lastLoggedVars.Heading - current.Heading) > 25)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateHeading(current.Heading));
+                }
 
-                changes.Add(new KeyValuePair<string, object>("Altitude", current.Altitude));
+                if (Math.Abs(_lastLoggedVars.IasKnots - current.IasKnots) > 15)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateGSKnots(current.GroundSpeedKnots));
+                    changes.Add(updateIASKnots(current.IasKnots));
+                }
+
+                if (_lastLoggedVars.QnhSet != current.QnhSet)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateAltitude(current.Altitude));
+                    changes.Add(updateAGLAltitude(current.AGLAltitude));
+                    changes.Add(updateAltimeter(current.Altimeter));
+                    changes.Add(updateQNHSet(current.QnhSet));
+                }
+
+                if (_lastLoggedVars.FlapsPercentage != current.FlapsPercentage)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateFlaps(current.FlapsPercentage));
+                }
+
+                if (_lastLoggedVars.GearUp != current.GearUp)
+                {
+                    changes.Add(updateLatitude(current.Latitude));
+                    changes.Add(updateLongitude(current.Longitude));
+                    changes.Add(updateGear(current.GearUp));
+                }
+
+                if(_lastLoggedVars.Squawk != current.Squawk)
+                {
+                    changes.Add(updateSquawk(current.Squawk));
+                }
+
+                for (int i = 0; i < current.EnginesStarted.Length; i++)
+                {
+                    if (_lastLoggedVars.EnginesStarted[i] != current.EnginesStarted[i])
+                    {
+                        changes.Add(updateEngineStatus(current.EnginesStarted[i], i));
+                    }
+                }
+
             }
-
-            if (previous == null || Math.Abs(previous.Heading - current.Heading) > 30)
-            {
-                if (previous == null || previous.Latitude != current.Latitude)
-                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
-
-                if (previous == null || previous.Longitude != current.Longitude)
-                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
-
-                changes.Add(new KeyValuePair<string, object>("Heading", current.Heading));
-            }
-
-            if (previous == null || Math.Abs(previous.GroundSpeedKnots - current.GroundSpeedKnots) > 20)
-            {
-                if (previous == null || previous.Latitude != current.Latitude)
-                    changes.Add(new KeyValuePair<string, object>("Latitude", current.Latitude));
-
-                if (previous == null || previous.Longitude != current.Longitude)
-                    changes.Add(new KeyValuePair<string, object>("Longitude", current.Longitude));
-
-                changes.Add(new KeyValuePair<string, object>("GroundSpeedKnots", current.GroundSpeedKnots));
-            }
-
             return changes;
         }
 
