@@ -413,6 +413,13 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("Squawk", squawk);
         }
 
+        private KeyValuePair<string, object> updateAPMaster(bool apMaster)
+        {
+            _lastLoggedVars.APMaster = apMaster;
+            string value = apMaster ? "On" : "Off";
+            return new KeyValuePair<string, object>("AP", value);
+        }
+
         private KeyValuePair<string, object> updateHeading(int heading)
         {
             _lastLoggedVars.Heading = heading;
@@ -519,6 +526,7 @@ namespace MamAcars.Services
                 changes.Add(updateGear(current.GearUp));
                 changes.Add(updateFuelKg(current.AircraftFuelKg));
                 changes.Add(updateSquawk(current.Squawk));
+                changes.Add(updateAPMaster(current.APMaster));
 
                 var enginesChanges = updateEnginesStatus(current.EnginesStarted);
                 foreach (var engineChange in enginesChanges)
@@ -584,6 +592,11 @@ namespace MamAcars.Services
                 if(_lastLoggedVars.Squawk != current.Squawk)
                 {
                     changes.Add(updateSquawk(current.Squawk));
+                }
+
+                if (_lastLoggedVars.APMaster != current.APMaster)
+                {
+                    changes.Add(updateAPMaster(current.APMaster));
                 }
 
                 for (int i = 0; i < current.EnginesStarted.Length; i++)

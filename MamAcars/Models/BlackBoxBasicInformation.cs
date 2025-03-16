@@ -20,6 +20,8 @@ namespace MamAcars.Models
 
         public int Squawk { get; set; }
 
+        public bool APMaster { get; set; }
+
         public int Heading { get; set; }
 
         public int GroundSpeedKnots { get; set; }
@@ -39,7 +41,7 @@ namespace MamAcars.Models
         public override string ToString()
         {
             return $"Latitude: {Latitude}, Longitude: {Longitude}, OnGround: {OnGround}, Altitude: {Altitude}, AGLAltitude: {AGLAltitude}, " +
-                   $"Altimeter: {Altimeter}, VerticalSpeedFPM: {VerticalSpeedFPM}, Squawk: {Squawk}, Heading: {Heading}, " +
+                   $"Altimeter: {Altimeter}, VerticalSpeedFPM: {VerticalSpeedFPM}, Squawk: {Squawk}, AP: {APMaster}, Heading: {Heading}, " +
                    $"GroundSpeedKnots: {GroundSpeedKnots}, IasKnots: {IasKnots}, QnhSet: {QnhSet}, Timestamp: {Timestamp:O}, " +
                    $"EnginesStarted: [{string.Join(", ", EnginesStarted)}], FlapsPercentage: {FlapsPercentage}, GearUp: {GearUp}, " +
                    $"AircraftFuelKg: {AircraftFuelKg}";
