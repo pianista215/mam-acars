@@ -55,6 +55,7 @@ namespace MamAcars.Services
         private Offset<int> altimeterOffset = new Offset<int>(BASIC_OFFSET, 0x3324);
         private Offset<int> verticalSpeedFpmOffset = new Offset<int>(BASIC_OFFSET, 0x02C8);
         private Offset<short> squawkOffset = new Offset<short>(BASIC_OFFSET, 0x0354);
+        private Offset<int> apMaster = new Offset<int>(BASIC_OFFSET, 0x07BC);
 
         private int GetSquawkCode()
         {
@@ -250,6 +251,8 @@ namespace MamAcars.Services
                 blackBoxBasicInformation.VerticalSpeedFPM = (int)(verticalSpeedFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
 
                 blackBoxBasicInformation.Squawk = this.GetSquawkCode();
+
+                blackBoxBasicInformation.APMaster = apMaster.Value > 0;
 
                 var heading = (double) headingOffset.Value * 360.0 / (65536.0 * 65536.0);
                 var magneticVariation = (double) magneticVariationOffset.Value * 360.0 / 65536.0;
