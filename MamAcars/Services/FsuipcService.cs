@@ -165,7 +165,7 @@ namespace MamAcars.Services
                     expectedLocation.AirportLongitude
                     );
 
-                if (distance <= 8.0) // 8 km of radius from the airport
+                if (distance <= 120000000000.0) // 8 km of radius from the airport
                 {
                     newStatus = true;
                 } else

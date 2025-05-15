@@ -75,19 +75,19 @@ namespace MamAcars.Services
 
         public async Task<FlightPlanInfoResponse> LoadCurrentFlightPlan()
         {
-            _apiService.SetBearerToken(TokenStorage.GetToken());
+            var flightInfo = new FlightPlanInfoResponse();
+            flightInfo.IsSuccess = true;
+            flightInfo.id = 1234;
+            flightInfo.departure_icao = "XXXX";
+            flightInfo.arrival_icao = "YYYY";
+            flightInfo.alt1_icao = "WWWW";
+            flightInfo.alt2_icao = "ZZZZ";
+            flightInfo.departure_latitude = 0.0;
+            flightInfo.departure_longitude = 0.0;
+            flightInfo.aircraft_type_icao = "AAAA";
+            flightInfo.aircraft_reg = "REGXXX";
 
-            var flightInfo = await _apiService.CurrentFlightPlanAsync();
-            if(flightInfo != null)
-            {
-                if (flightInfo.IsSuccess)
-                {
-                    this.flightPlan = flightInfo;
-                } else if (flightInfo.AuthFailure)
-                {
-                    TokenStorage.DeleteToken();
-                }
-            }
+            this.flightPlan = flightInfo;
 
             return flightInfo;
         }

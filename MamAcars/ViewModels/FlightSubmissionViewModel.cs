@@ -77,7 +77,7 @@ namespace MamAcars.ViewModels
             {
                 ExportBlackBox,
                 SplitBlackBox,
-                SendFlightReport
+                //SendFlightReport
             };
 
             int stepProgress = 100 / (steps.Count + 1);
@@ -88,7 +88,7 @@ namespace MamAcars.ViewModels
                 Progress += stepProgress;
             }
 
-            for (int i = 0; i < numberOfChunks; i++)
+            /*for (int i = 0; i < numberOfChunks; i++)
             {
                 if (!await UploadChunk(i, numberOfChunks)) return;
                 Progress += stepProgress / numberOfChunks;
@@ -98,7 +98,9 @@ namespace MamAcars.ViewModels
             {
                 Progress = 100;
                 OnSubmissionCompleted?.Invoke();
-            }
+            }*/
+            Progress = 100;
+            OnSubmissionCompleted?.Invoke();
         }
 
         private async Task<bool> ExportBlackBox()

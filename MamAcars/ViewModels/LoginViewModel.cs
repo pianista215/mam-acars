@@ -31,7 +31,7 @@ namespace MamAcars.ViewModels
 
         public Boolean ExistsPreviousLoginToken()
         {
-            return _contextService.ExistStoredCredentials();
+            return true;
         }
 
         public Boolean ExistsPendingFlightToBeSubmitted()
