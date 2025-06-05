@@ -509,11 +509,21 @@ namespace MamAcars.Services
             return false;
         }
 
+        private bool ShouldLogLanding(BlackBoxBasicInformation current)
+        {
+            return _lastFullWritten != null && current.OnGround && _lastLoggedVars.OnGround == false;
+        }
+
         private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation current)
         {
             var changes = new List<KeyValuePair<string, object>>();
 
             var now = DateTime.UtcNow;
+
+            if (ShouldLogLanding(current))
+            {
+                changes.Add(updateLandingVsSpeed(current.LandingVSFPM));
+            }
 
             if (this.ShouldLogFullState(now, current))
             {
@@ -524,7 +534,6 @@ namespace MamAcars.Services
                 changes.Add(updateAGLAltitude(current.AGLAltitude));
                 changes.Add(updateAltimeter(current.Altimeter));
                 changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
-                changes.Add(updateLandingVsSpeed(current.LandingVSFPM));
                 changes.Add(updateHeading(current.Heading));
                 changes.Add(updateGSKnots(current.GroundSpeedKnots));
                 changes.Add(updateIASKnots(current.IasKnots));
