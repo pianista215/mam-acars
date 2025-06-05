@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MamAcars"
         mc:Ignorable="d"
         Title="Mam Acars" 
-        ResizeMode="NoResize"
+        ResizeMode="CanMinimize"
         SizeToContent="WidthAndHeight">
     <Grid>
         <Frame Name="MainFrame" NavigationUIVisibility="Hidden" />
