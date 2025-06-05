@@ -407,6 +407,12 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("VSFpm", verticalSpeedFpm);
         }
 
+        private KeyValuePair<string, object> updateLandingVsSpeed(int landingVsFpm)
+        {
+            _lastLoggedVars.LandingVSFPM = landingVsFpm;
+            return new KeyValuePair<string, object>("LandingVSFpm", landingVsFpm);
+        }
+
         private KeyValuePair<string, object> updateSquawk(int squawk)
         {
             _lastLoggedVars.Squawk = squawk;
@@ -503,11 +509,21 @@ namespace MamAcars.Services
             return false;
         }
 
+        private bool ShouldLogLanding(BlackBoxBasicInformation current)
+        {
+            return _lastFullWritten != null && current.OnGround && _lastLoggedVars.OnGround == false;
+        }
+
         private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation current)
         {
             var changes = new List<KeyValuePair<string, object>>();
 
             var now = DateTime.UtcNow;
+
+            if (ShouldLogLanding(current))
+            {
+                changes.Add(updateLandingVsSpeed(current.LandingVSFPM));
+            }
 
             if (this.ShouldLogFullState(now, current))
             {

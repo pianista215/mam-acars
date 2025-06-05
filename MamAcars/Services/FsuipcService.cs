@@ -54,6 +54,7 @@ namespace MamAcars.Services
         private Offset<short> qnhSetOffset = new Offset<short>(BASIC_OFFSET, 0x0330);
         private Offset<int> altimeterOffset = new Offset<int>(BASIC_OFFSET, 0x3324);
         private Offset<int> verticalSpeedFpmOffset = new Offset<int>(BASIC_OFFSET, 0x02C8);
+        private Offset<int> landingFpmOffset = new Offset<int>(BASIC_OFFSET, 0x030C);
         private Offset<short> squawkOffset = new Offset<short>(BASIC_OFFSET, 0x0354);
         private Offset<int> apMaster = new Offset<int>(BASIC_OFFSET, 0x07BC);
 
@@ -249,6 +250,8 @@ namespace MamAcars.Services
                 blackBoxBasicInformation.Altimeter = altimeterOffset.Value;
 
                 blackBoxBasicInformation.VerticalSpeedFPM = (int)(verticalSpeedFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
+
+                blackBoxBasicInformation.LandingVSFPM = (int)(landingFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
 
                 blackBoxBasicInformation.Squawk = this.GetSquawkCode();
 

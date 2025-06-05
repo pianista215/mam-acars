@@ -21,3 +21,8 @@ packages/
 *.suo
 *.user
 *.sln.docstates
+
+# Local configs
+*.pubxml
+*.pubxml.user
+*.csproj.user
