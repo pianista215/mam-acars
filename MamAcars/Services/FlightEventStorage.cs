@@ -407,6 +407,12 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("VSFpm", verticalSpeedFpm);
         }
 
+        private KeyValuePair<string, object> updateLandingVsSpeed(int landingVsFpm)
+        {
+            _lastLoggedVars.LandingVSFPM = landingVsFpm;
+            return new KeyValuePair<string, object>("LandingVSFpm", landingVsFpm);
+        }
+
         private KeyValuePair<string, object> updateSquawk(int squawk)
         {
             _lastLoggedVars.Squawk = squawk;
@@ -518,6 +524,7 @@ namespace MamAcars.Services
                 changes.Add(updateAGLAltitude(current.AGLAltitude));
                 changes.Add(updateAltimeter(current.Altimeter));
                 changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
+                changes.Add(updateLandingVsSpeed(current.LandingVSFPM));
                 changes.Add(updateHeading(current.Heading));
                 changes.Add(updateGSKnots(current.GroundSpeedKnots));
                 changes.Add(updateIASKnots(current.IasKnots));
