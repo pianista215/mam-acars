@@ -58,6 +58,8 @@ namespace MamAcars.Services
         private Offset<short> squawkOffset = new Offset<short>(BASIC_OFFSET, 0x0354);
         private Offset<int> apMaster = new Offset<int>(BASIC_OFFSET, 0x07BC);
 
+        private Offset<uint> zfwOffset = new Offset<uint>(BASIC_OFFSET, 0x3BFC);
+
         private int GetSquawkCode()
         {
             short rawValue = squawkOffset.Value;
@@ -97,7 +99,6 @@ namespace MamAcars.Services
         private Offset<string> tailNoOffset = new Offset<string>(AIRCRAFT_INFO, 0x313C, 12);
         private Offset<string> aircraftTypeOffset = new Offset<string>(AIRCRAFT_INFO, 0x3160, 24);
         private Offset<short> planeEnginesOffset = new Offset<short>(AIRCRAFT_INFO, 0x0AEC);
-
 
         public void startLookingSimulatorAndAircraftLocation(double airportLatitude, double airportLongitude)
         {
@@ -276,6 +277,7 @@ namespace MamAcars.Services
                 }
 
                 blackBoxBasicInformation.AircraftFuelKg = this.getAircraftFuelKg();
+                blackBoxBasicInformation.AircraftZFW = (int)(zfwOffset.Value / 256.0 * MamUtils.LBS_TO_KG);
 
                 var flightId = state as long?;
 

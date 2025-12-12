@@ -470,6 +470,12 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("FuelKg", fuelKg);
         }
 
+        private KeyValuePair<string, object> updateZFW(int zfw)
+        {
+            _lastLoggedVars.AircraftZFW = zfw;
+            return new KeyValuePair<string, object>("ZFW", zfw);
+        }
+
         private KeyValuePair<string, object> updateEngineStatus(bool engine, int enginePos)
         {
             _lastLoggedVars.EnginesStarted[enginePos] = engine;
@@ -514,6 +520,11 @@ namespace MamAcars.Services
             return _lastFullWritten != null && current.OnGround && _lastLoggedVars.OnGround == false;
         }
 
+        private bool ShouldLogZFW(BlackBoxBasicInformation current)
+        {
+            return current.AircraftZFW != _lastLoggedVars.AircraftZFW;
+        }
+
         private List<KeyValuePair<string, object>> GetChanges(BlackBoxBasicInformation current)
         {
             var changes = new List<KeyValuePair<string, object>>();
@@ -550,7 +561,12 @@ namespace MamAcars.Services
                     changes.Add(engineChange);
                 }
 
-                //Log.Information($"NEW STATUS: {_lastLoggedVars}");
+                // Log.Information($"NEW STATUS: {_lastLoggedVars}");
+
+                if (ShouldLogZFW(current))
+                {
+                    changes.Add(updateZFW(current.AircraftZFW));
+                }
 
                 this._lastFullWritten = now;
             }
