@@ -561,12 +561,12 @@ namespace MamAcars.Services
                     changes.Add(engineChange);
                 }
 
-                // Log.Information($"NEW STATUS: {_lastLoggedVars}");
-
                 if (ShouldLogZFW(current))
                 {
                     changes.Add(updateZFW(current.AircraftZFW));
                 }
+
+                Log.Information($"NEW STATUS: {_lastLoggedVars}");
 
                 this._lastFullWritten = now;
             }
