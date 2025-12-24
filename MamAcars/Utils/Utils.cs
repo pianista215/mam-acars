@@ -25,6 +25,8 @@ namespace MamAcars.Utils
 
         public const double METER_TO_FEETS = 3.28084;
 
+        public const double LBS_TO_KG = 0.45359;
+
         public static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             double lat1Rad = DegreesToRadians(lat1);

@@ -40,13 +40,15 @@ namespace MamAcars.Models
 
         public double AircraftFuelKg { get; set; }
 
+        public int AircraftZFW { get; set; }
+
         public override string ToString()
         {
             return $"Latitude: {Latitude}, Longitude: {Longitude}, OnGround: {OnGround}, Altitude: {Altitude}, AGLAltitude: {AGLAltitude}, " +
                    $"Altimeter: {Altimeter}, VerticalSpeedFPM: {VerticalSpeedFPM}, LandingVSFPM: {LandingVSFPM}, Squawk: {Squawk}, AP: {APMaster}, Heading: {Heading}, " +
                    $"GroundSpeedKnots: {GroundSpeedKnots}, IasKnots: {IasKnots}, QnhSet: {QnhSet}, Timestamp: {Timestamp:O}, " +
                    $"EnginesStarted: [{string.Join(", ", EnginesStarted)}], FlapsPercentage: {FlapsPercentage}, GearUp: {GearUp}, " +
-                   $"AircraftFuelKg: {AircraftFuelKg}";
+                   $"AircraftFuelKg: {AircraftFuelKg} AircraftZFW: {AircraftZFW}";
         }
     }
 }
