@@ -45,7 +45,7 @@ namespace MamAcars
             if (page != null && page.HasUnsavedChanges)
             {
                 var res = MessageBox.Show(
-                    "The progress of your flight will be lost if you exit now.\n\nAre you sure you want to exit?",,
+                    "The progress of your flight will be lost if you exit now.\n\nAre you sure you want to exit?",
                     "Warning",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
