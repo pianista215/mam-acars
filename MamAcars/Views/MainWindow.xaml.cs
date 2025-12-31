@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MamAcars.Contracts;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,11 +20,46 @@ namespace MamAcars
 
     public partial class MainWindow : Window
     {
+        private bool forceExit = false;
         public MainWindow()
         {
             InitializeComponent();
 
+            this.Closing += MainWindow_Closing;
+
             ShowLoginPage();
+        }
+
+        private IPageWithUnsavedChanges GetCurrentPage()
+        {
+            return MainFrame.Content as IPageWithUnsavedChanges;
+        }
+
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            if (forceExit)
+                return;
+
+            var page = GetCurrentPage();
+
+            if (page != null && page.HasUnsavedChanges)
+            {
+                var res = MessageBox.Show(
+                    "The progress of your flight will be lost if you exit now.\n\nAre you sure you want to exit?",,
+                    "Warning",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (res == MessageBoxResult.No)
+                {
+                    e.Cancel = true;
+                }
+                else
+                {
+                    forceExit = true;
+                    Application.Current.Shutdown();
+                }
+            }
         }
 
         private void ShowLoginPage()

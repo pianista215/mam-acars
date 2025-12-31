@@ -1,4 +1,5 @@
-﻿using MamAcars.ViewModels;
+﻿using MamAcars.Contracts;
+using MamAcars.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +17,10 @@ using System.Windows.Shapes;
 
 namespace MamAcars
 {
-    public partial class FlightRecordingPage : Page
+    public partial class FlightRecordingPage : Page, IPageWithUnsavedChanges
     {
+        public bool HasUnsavedChanges { get; private set; }
+
         private Action _onEndFlight;
         private readonly FlightRecordingViewModel _viewModel;
 
@@ -27,6 +30,7 @@ namespace MamAcars
             _viewModel = new FlightRecordingViewModel();
             DataContext = _viewModel;
             _onEndFlight = onEndFlight;
+            HasUnsavedChanges = true;
         }
 
         private void OnEndFlightClicked(object sender, RoutedEventArgs e)
