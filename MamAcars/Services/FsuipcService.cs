@@ -19,17 +19,13 @@ namespace MamAcars.Services
     {
 
         private FlightEventStorage _storage;
-        private ApiService _apiService;
 
-        public FsuipcService(FlightEventStorage storage, ApiService apiService)
+        public FsuipcService(FlightEventStorage storage)
         {
             _storage = storage;
-            _apiService = apiService;
         }
 
         private Timer _timer;
-        private Timer _livePositionTimer;
-        private long _currentFlightPlanId;
         private bool _simConnected = false;
         private bool _planeOnAirport = false;
 
@@ -221,52 +217,33 @@ namespace MamAcars.Services
         public void startSavingBlackBox(long flightPlanId)
         {
             Log.Information($"Start saving blackbox fplId {flightPlanId}");
-            _currentFlightPlanId = flightPlanId;
             _storage.RegisterFlight(flightPlanId, this.getAircraftInfo(), MamUtils.GetOnlineNetwork());
             this.initializeEngineOffsets(planeEnginesOffset.Value);
             _timer = new Timer(SaveBlackBoxData, flightPlanId, 0, 2000);
-            _livePositionTimer = new Timer(SendLivePosition, null, 0, 60000);
         }
 
         public void stopSavingBlackBox()
         {
             Log.Information("Stop saving blackbox");
             _timer?.Dispose();
-            _livePositionTimer?.Dispose();
         }
 
-        private async void SendLivePosition(object state)
+        public LivePositionRequest GetCurrentPosition()
         {
-            try
+            FSUIPCConnection.Process("Basic");
+
+            var heading = (double)headingOffset.Value * 360.0 / (65536.0 * 65536.0);
+            var magneticVariation = (double)magneticVariationOffset.Value * 360.0 / 65536.0;
+            var correctedHeading = ((int)(heading - magneticVariation) % 360 + 360) % 360;
+
+            return new LivePositionRequest
             {
-                FSUIPCConnection.Process("Basic");
-
-                var heading = (double)headingOffset.Value * 360.0 / (65536.0 * 65536.0);
-                var magneticVariation = (double)magneticVariationOffset.Value * 360.0 / 65536.0;
-                var correctedHeading = ((int)(heading - magneticVariation) % 360 + 360) % 360;
-
-                var positionData = new LivePositionRequest
-                {
-                    latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5),
-                    longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5),
-                    altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0)),
-                    heading = correctedHeading,
-                    ground_speed = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d)
-                };
-
-                Log.Information($"Sending live position: lat={positionData.latitude}, lon={positionData.longitude}, alt={positionData.altitude}, hdg={positionData.heading}, gs={positionData.ground_speed}");
-
-                var response = await _apiService.UpdateLivePositionAsync(_currentFlightPlanId, positionData);
-
-                if (!response.IsSuccess)
-                {
-                    Log.Warning($"Failed to send live position: {response.ErrorMessage}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning($"Error sending live position: {ex.Message}");
-            }
+                latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5),
+                longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5),
+                altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0)),
+                heading = correctedHeading,
+                ground_speed = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d)
+            };
         }
 
         private double RoundToDecimals(double value, int decimals)

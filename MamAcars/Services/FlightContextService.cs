@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MamAcars.Services
@@ -32,11 +33,13 @@ namespace MamAcars.Services
 
         private string submittedReportId;
 
+        private Timer _livePositionTimer;
+
         private FlightContextService()
         {
             _apiService = new ApiService();
             _storage = new FlightEventStorage();
-            _fsuipcService = new FsuipcService(_storage, _apiService);
+            _fsuipcService = new FsuipcService(_storage);
         }
 
         public Boolean ExistStoredCredentials()
@@ -107,11 +110,35 @@ namespace MamAcars.Services
         public void startSavingBlackBox()
         {
             _fsuipcService.startSavingBlackBox(flightPlan.id);
+            _livePositionTimer = new Timer(SendLivePosition, null, 0, 60000);
         }
 
         public void stopSavingBlackBox()
         {
             _fsuipcService.stopSavingBlackBox();
+            _livePositionTimer?.Dispose();
+        }
+
+        private async void SendLivePosition(object state)
+        {
+            try
+            {
+                var positionData = _fsuipcService.GetCurrentPosition();
+
+                Log.Information($"Sending live position: lat={positionData.latitude}, lon={positionData.longitude}, alt={positionData.altitude}, hdg={positionData.heading}, gs={positionData.ground_speed}");
+
+                _apiService.SetBearerToken(TokenStorage.GetToken());
+                var response = await _apiService.UpdateLivePositionAsync(flightPlan.id, positionData);
+
+                if (!response.IsSuccess)
+                {
+                    Log.Warning($"Failed to send live position: {response.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"Error sending live position: {ex.Message}");
+            }
         }
 
         public void SetCommentToBlackBox(string comment)
