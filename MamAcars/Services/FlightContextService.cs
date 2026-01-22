@@ -36,7 +36,7 @@ namespace MamAcars.Services
         {
             _apiService = new ApiService();
             _storage = new FlightEventStorage();
-            _fsuipcService = new FsuipcService(_storage);
+            _fsuipcService = new FsuipcService(_storage, _apiService);
         }
 
         public Boolean ExistStoredCredentials()

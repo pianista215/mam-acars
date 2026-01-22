@@ -143,6 +143,12 @@ namespace MamAcars.Services
             return await SendRequestAsync<SubmitReportRequest, SubmitReportResponse>(url, HttpMethod.Post, rq);
         }
 
+        public async Task<LivePositionResponse> UpdateLivePositionAsync(long flightPlanId, LivePositionRequest positionData)
+        {
+            string url = $"v1/live-position/update?flight_plan_id={flightPlanId}";
+            return await SendRequestAsync<LivePositionRequest, LivePositionResponse>(url, HttpMethod.Post, positionData);
+        }
+
         public async Task<UploadChunkResponse> UploadChunk(string flightReportId, int chunkId, string chunkPath)
         {
             try
@@ -251,6 +257,19 @@ namespace MamAcars.Services
     public class UploadChunkResponse : BaseResponse
     {
         public string status { get; set; }
+    }
+
+    public class LivePositionRequest
+    {
+        public double latitude { get; set; }
+        public double longitude { get; set; }
+        public int altitude { get; set; }
+        public int heading { get; set; }
+        public int ground_speed { get; set; }
+    }
+
+    public class LivePositionResponse : BaseResponse
+    {
     }
 
 }
