@@ -123,7 +123,13 @@ namespace MamAcars.Services
         {
             try
             {
-                var positionData = _fsuipcService.GetCurrentPosition();
+                var positionData = _fsuipcService.GetLastRecordedPosition();
+
+                if (positionData == null)
+                {
+                    Log.Debug("No position data recorded yet, skipping live position update");
+                    return;
+                }
 
                 Log.Information($"Sending live position: lat={positionData.latitude}, lon={positionData.longitude}, alt={positionData.altitude}, hdg={positionData.heading}, gs={positionData.ground_speed}");
 

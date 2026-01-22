@@ -28,6 +28,7 @@ namespace MamAcars.Services
         private Timer _timer;
         private bool _simConnected = false;
         private bool _planeOnAirport = false;
+        private BlackBoxBasicInformation _lastRecordedPosition;
 
         public bool SimConnected => _simConnected;
 
@@ -228,21 +229,20 @@ namespace MamAcars.Services
             _timer?.Dispose();
         }
 
-        public LivePositionRequest GetCurrentPosition()
+        public LivePositionRequest? GetLastRecordedPosition()
         {
-            FSUIPCConnection.Process("Basic");
-
-            var heading = (double)headingOffset.Value * 360.0 / (65536.0 * 65536.0);
-            var magneticVariation = (double)magneticVariationOffset.Value * 360.0 / 65536.0;
-            var correctedHeading = ((int)(heading - magneticVariation) % 360 + 360) % 360;
+            if (_lastRecordedPosition == null)
+            {
+                return null;
+            }
 
             return new LivePositionRequest
             {
-                latitude = RoundToDecimals(latitudeOffset.Value.DecimalDegrees, 5),
-                longitude = RoundToDecimals(longitudeOffset.Value.DecimalDegrees, 5),
-                altitude = Convert.ToInt32(altitudeOffset.Value * MamUtils.METER_TO_FEETS / (65536.0 * 65536.0)),
-                heading = correctedHeading,
-                ground_speed = (int)((double)groundSpeedOffset.Value * 3600d / 65536d / 1852d)
+                latitude = _lastRecordedPosition.Latitude,
+                longitude = _lastRecordedPosition.Longitude,
+                altitude = _lastRecordedPosition.Altitude,
+                heading = _lastRecordedPosition.Heading,
+                ground_speed = _lastRecordedPosition.GroundSpeedKnots
             };
         }
 
@@ -299,6 +299,7 @@ namespace MamAcars.Services
 
                 var flightId = state as long?;
 
+                _lastRecordedPosition = blackBoxBasicInformation;
                 _storage.RecordEvent(flightId, blackBoxBasicInformation);
             } catch
             {
