@@ -22,12 +22,13 @@ namespace MamAcars.Services
 
         public FsuipcService(FlightEventStorage storage)
         {
-            _storage = storage; 
+            _storage = storage;
         }
 
         private Timer _timer;
         private bool _simConnected = false;
         private bool _planeOnAirport = false;
+        private BlackBoxBasicInformation _lastRecordedPosition;
 
         public bool SimConnected => _simConnected;
 
@@ -228,6 +229,23 @@ namespace MamAcars.Services
             _timer?.Dispose();
         }
 
+        public LivePositionRequest? GetLastRecordedPosition()
+        {
+            if (_lastRecordedPosition == null)
+            {
+                return null;
+            }
+
+            return new LivePositionRequest
+            {
+                latitude = _lastRecordedPosition.Latitude,
+                longitude = _lastRecordedPosition.Longitude,
+                altitude = _lastRecordedPosition.Altitude,
+                heading = _lastRecordedPosition.Heading,
+                ground_speed = _lastRecordedPosition.GroundSpeedKnots
+            };
+        }
+
         private double RoundToDecimals(double value, int decimals)
         {
             return Math.Round(value, decimals);
@@ -281,6 +299,7 @@ namespace MamAcars.Services
 
                 var flightId = state as long?;
 
+                _lastRecordedPosition = blackBoxBasicInformation;
                 _storage.RecordEvent(flightId, blackBoxBasicInformation);
             } catch
             {

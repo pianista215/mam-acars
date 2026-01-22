@@ -26,3 +26,4 @@ packages/
 *.pubxml
 *.pubxml.user
 *.csproj.user
+CLAUDE.md
