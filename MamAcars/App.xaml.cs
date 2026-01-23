@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Velopack;
@@ -9,17 +10,39 @@ namespace MamAcars
 {
     public partial class App : Application
     {
+        private static Mutex? _mutex;
+
         [STAThread]
         public static void Main(string[] args)
         {
             // Velopack debe ejecutarse ANTES de cualquier otra cosa
             VelopackApp.Build().Run();
 
-            var app = new App();
-            app.InitializeComponent();
-            app.MainWindow = new MainWindow();
-            app.MainWindow.Show();
-            app.Run();
+            _mutex = new Mutex(true, $"Global\\{BrandingConfig.AppId}_SingleInstance", out bool createdNew);
+
+            if (!createdNew)
+            {
+                MessageBox.Show(
+                    "La aplicación ya está en ejecución.",
+                    BrandingConfig.AppName,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                var app = new App();
+                app.InitializeComponent();
+                app.MainWindow = new MainWindow();
+                app.MainWindow.Show();
+                app.Run();
+            }
+            finally
+            {
+                _mutex.ReleaseMutex();
+                _mutex.Dispose();
+            }
         }
 
         public App()
