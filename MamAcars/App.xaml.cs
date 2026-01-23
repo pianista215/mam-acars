@@ -14,11 +14,7 @@ namespace MamAcars
     {
         public App()
         {
-            string logDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "MamAcars",
-                "logs"
-            );
+            string logDirectory = Path.Combine(BrandingConfig.DataDirectory, "logs");
 
             Directory.CreateDirectory(logDirectory);
 

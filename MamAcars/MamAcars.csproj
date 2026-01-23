@@ -1,22 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Import branding properties (assembly name, icon, etc.) -->
+  <Import Project="branding\branding.props" />
+
   <PropertyGroup>
-	<Version>1.0.0</Version>
+    <Version>1.0.0</Version>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <!-- Branding resources -->
   <ItemGroup>
-    <None Remove="images\logo.png" />
+    <None Remove="branding\logo.png" />
+    <None Remove="branding\icon.ico" />
+    <None Remove="branding\branding.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="images\logo.png">
+    <Content Include="branding\logo.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="branding\icon.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- branding.json is NOT copied - only used at build time -->
   </ItemGroup>
+
+  <!-- Import branding code generation target -->
+  <Import Project="branding\branding.targets" />
 
   <ItemGroup>
     <PackageReference Include="FSUIPCClientDLL" Version="3.3.13" />

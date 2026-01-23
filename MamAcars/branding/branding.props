@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Assembly and product naming -->
+    <AssemblyName>MamAcars</AssemblyName>
+    <Product>Mam Acars</Product>
+    <Company>Mam Airlines</Company>
+
+    <!-- Application icon -->
+    <ApplicationIcon>branding\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+</Project>

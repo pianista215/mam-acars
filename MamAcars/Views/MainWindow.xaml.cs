@@ -24,6 +24,7 @@ namespace MamAcars
         public MainWindow()
         {
             InitializeComponent();
+            Title = BrandingConfig.AppName;
 
             this.Closing += MainWindow_Closing;
 

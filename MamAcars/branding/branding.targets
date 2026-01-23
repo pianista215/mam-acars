@@ -1,0 +1,53 @@
+<Project>
+  <!-- Target to generate BrandingConfig.g.cs from branding.json -->
+  <Target Name="GenerateBrandingConfig" BeforeTargets="CoreCompile" Inputs="branding\branding.json" Outputs="$(IntermediateOutputPath)BrandingConfig.g.cs">
+
+    <PropertyGroup>
+      <BrandingJsonPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\branding\branding.json'))</BrandingJsonPath>
+      <BrandingOutputPath>$(IntermediateOutputPath)BrandingConfig.g.cs</BrandingOutputPath>
+    </PropertyGroup>
+
+    <!-- Read the JSON file content -->
+    <ReadLinesFromFile File="$(BrandingJsonPath)">
+      <Output TaskParameter="Lines" ItemName="BrandingJsonLines" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup>
+      <BrandingJsonContent>@(BrandingJsonLines)</BrandingJsonContent>
+
+      <!-- Extract values using regex - simplified approach -->
+      <BrandingAppName>$([System.Text.RegularExpressions.Regex]::Match($(BrandingJsonContent), '"AppName"\s*:\s*"([^"]*)"').Groups[1].Value)</BrandingAppName>
+      <BrandingAppId>$([System.Text.RegularExpressions.Regex]::Match($(BrandingJsonContent), '"AppId"\s*:\s*"([^"]*)"').Groups[1].Value)</BrandingAppId>
+      <BrandingCompanyName>$([System.Text.RegularExpressions.Regex]::Match($(BrandingJsonContent), '"CompanyName"\s*:\s*"([^"]*)"').Groups[1].Value)</BrandingCompanyName>
+      <BrandingApiBaseUrl>$([System.Text.RegularExpressions.Regex]::Match($(BrandingJsonContent), '"ApiBaseUrl"\s*:\s*"([^"]*)"').Groups[1].Value)</BrandingApiBaseUrl>
+      <BrandingUpdateUrl>$([System.Text.RegularExpressions.Regex]::Match($(BrandingJsonContent), '"UpdateUrl"\s*:\s*"([^"]*)"').Groups[1].Value)</BrandingUpdateUrl>
+    </PropertyGroup>
+
+    <!-- Generate the C# file -->
+    <PropertyGroup>
+      <BrandingConfigContent>
+// Auto-generated from branding/branding.json - DO NOT EDIT
+namespace MamAcars%3B
+
+public static class BrandingConfig
+{
+    public const string AppName = "$(BrandingAppName)"%3B
+    public const string AppId = "$(BrandingAppId)"%3B
+    public const string CompanyName = "$(BrandingCompanyName)"%3B
+    public const string ApiBaseUrl = "$(BrandingApiBaseUrl)"%3B
+    public const string UpdateUrl = "$(BrandingUpdateUrl)"%3B
+
+    public static string DataDirectory { get { return System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), AppId)%3B } }
+}
+      </BrandingConfigContent>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(BrandingOutputPath)" Lines="$(BrandingConfigContent)" Overwrite="true" />
+
+    <ItemGroup>
+      <Compile Include="$(BrandingOutputPath)" />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Generated BrandingConfig.g.cs from branding.json" />
+  </Target>
+</Project>

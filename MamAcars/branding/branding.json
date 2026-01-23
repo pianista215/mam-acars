@@ -1,0 +1,7 @@
+{
+  "AppName": "Mam Acars",
+  "AppId": "MamAcars",
+  "CompanyName": "Mam Airlines",
+  "ApiBaseUrl": "http://localhost:8080/api/",
+  "UpdateUrl": ""
+}
