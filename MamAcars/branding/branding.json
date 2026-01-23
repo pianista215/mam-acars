@@ -3,5 +3,5 @@
   "AppId": "MamAcars",
   "CompanyName": "Mam Airlines",
   "ApiBaseUrl": "http://localhost:8080/api/",
-  "UpdateUrl": ""
+  "UpdateUrl": "http://localhost:8080/acars-updater/update/"
 }
