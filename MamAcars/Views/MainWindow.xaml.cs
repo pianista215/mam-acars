@@ -73,8 +73,9 @@ namespace MamAcars
             MainFrame.Navigate(new FlightSubmissionPage(OnSendFlight));
         }
 
-        private void OnLoginSuccess()
+        private async void OnLoginSuccess()
         {
+            await App.CheckForUpdates();
             MainFrame.Navigate(new FlightInfoPage(OnStartFlight));
         }
 

@@ -27,3 +27,11 @@ packages/
 *.pubxml.user
 *.csproj.user
 CLAUDE.md
+
+# Velopack / Publish output
+Releases/
+publish/
+
+# Backup files
+*- Backup.csproj
+*.bak
