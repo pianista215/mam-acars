@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Reflection;
 
 namespace MamAcars
 {
@@ -24,7 +25,8 @@ namespace MamAcars
         public MainWindow()
         {
             InitializeComponent();
-            Title = BrandingConfig.AppName;
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Title = $"{BrandingConfig.AppName} v{version?.Major}.{version?.Minor}.{version?.Build}";
 
             this.Closing += MainWindow_Closing;
 

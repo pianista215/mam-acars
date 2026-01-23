@@ -1,10 +1,12 @@
 # pack.ps1 - Build and package the application with Velopack
-# Usage: .\pack.ps1
+# Usage: .\pack.ps1 (run from solution root)
 
 $ErrorActionPreference = "Stop"
 
+$projectDir = "MamAcars"
+
 # Read version from .csproj
-[xml]$csproj = Get-Content "MamAcars.csproj"
+[xml]$csproj = Get-Content "$projectDir\MamAcars.csproj"
 $version = $csproj.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 
 if (-not $version) {
@@ -13,7 +15,7 @@ if (-not $version) {
 }
 
 # Read branding configuration
-$brandingJson = Get-Content "branding\branding.json" | ConvertFrom-Json
+$brandingJson = Get-Content "$projectDir\branding\branding.json" | ConvertFrom-Json
 $appId = $brandingJson.AppId
 
 if (-not $appId) {
@@ -22,7 +24,7 @@ if (-not $appId) {
 }
 
 # Read assembly name from branding.props
-[xml]$brandingProps = Get-Content "branding\branding.props"
+[xml]$brandingProps = Get-Content "$projectDir\branding\branding.props"
 $assemblyName = $brandingProps.Project.PropertyGroup.AssemblyName | Where-Object { $_ } | Select-Object -First 1
 
 if (-not $assemblyName) {
@@ -45,7 +47,7 @@ if (Test-Path $publishDir) {
 
 # Publish
 Write-Host "Publishing application..." -ForegroundColor Green
-dotnet publish MamAcars.csproj -c Release --self-contained -r win-x64 -o $publishDir
+dotnet publish "$projectDir\MamAcars.csproj" -c Release --self-contained -r win-x64 -o $publishDir
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Publish failed"
