@@ -28,11 +28,9 @@ namespace MamAcars.Services
         private BlackBoxBasicInformation _lastLoggedVars = new BlackBoxBasicInformation();
         private DateTime? _lastFullWritten = null;
 
-        private static readonly string FilePath =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "sqlite.dat");
+        private static readonly string FilePath = Path.Combine(BrandingConfig.DataDirectory, "sqlite.dat");
 
-        private static readonly string FlightsPath =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "flights");
+        private static readonly string FlightsPath = Path.Combine(BrandingConfig.DataDirectory, "flights");
 
         private string GetFlightJsonFilePath(long flightId)
         {

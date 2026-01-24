@@ -32,7 +32,7 @@
     </Grid.RowDefinitions>
 
     
-    <Image Source="/images/logo.png" Grid.ColumnSpan="2" Margin="0,0,0,20" HorizontalAlignment="Center" Grid.Row="0" Width="100"/>
+    <Image Source="/branding/logo.png" Grid.ColumnSpan="2" Margin="0,0,0,20" HorizontalAlignment="Center" Grid.Row="0" Width="100"/>
 
 
      <Label Content="License" Grid.Column="0" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" FontSize="18"/>

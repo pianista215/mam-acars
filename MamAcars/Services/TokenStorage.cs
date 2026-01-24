@@ -10,8 +10,7 @@ namespace MamAcars.Services
 {
     public static class TokenStorage
     {
-        private static readonly string FilePath = 
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MamAcars", "token.dat");
+        private static readonly string FilePath = Path.Combine(BrandingConfig.DataDirectory, "token.dat");
 
         public static void SaveToken(string token)
         {

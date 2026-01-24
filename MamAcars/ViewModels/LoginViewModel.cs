@@ -22,8 +22,6 @@ namespace MamAcars.ViewModels
 
         private readonly FlightContextService _contextService;
 
-        public event Action OnLoginSuccess;
-
         public LoginViewModel()
         {
             _contextService = FlightContextService.Instance;

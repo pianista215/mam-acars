@@ -1,28 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Import branding properties (assembly name, icon, etc.) -->
+  <Import Project="branding\branding.props" />
+
   <PropertyGroup>
-	<Version>1.0.0</Version>
+    <Version>1.0.0</Version>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <StartupObject>MamAcars.App</StartupObject>
   </PropertyGroup>
 
+  <!-- Change App.xaml from ApplicationDefinition to Page for custom Main (required by Velopack) -->
   <ItemGroup>
-    <None Remove="images\logo.png" />
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+
+  <!-- Branding resources -->
+  <ItemGroup>
+    <None Remove="branding\logo.png" />
+    <None Remove="branding\icon.ico" />
+    <None Remove="branding\branding.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="images\logo.png">
+    <Content Include="branding\logo.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="branding\icon.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- branding.json is NOT copied - only used at build time -->
   </ItemGroup>
+
+  <!-- Import branding code generation target -->
+  <Import Project="branding\branding.targets" />
 
   <ItemGroup>
     <PackageReference Include="FSUIPCClientDLL" Version="3.3.13" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
 </Project>

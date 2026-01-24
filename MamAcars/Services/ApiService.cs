@@ -25,7 +25,7 @@ namespace MamAcars.Services
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("http://localhost:8080/api/"),
+                BaseAddress = new Uri(BrandingConfig.ApiBaseUrl),
                 Timeout = TimeSpan.FromSeconds(10)
             };
         }
