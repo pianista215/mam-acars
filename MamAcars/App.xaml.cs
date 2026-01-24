@@ -1,10 +1,12 @@
-﻿using Serilog;
+﻿using MamAcars.Services;
+using Serilog;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Velopack;
+using Velopack.Sources;
 
 namespace MamAcars
 {
@@ -15,8 +17,11 @@ namespace MamAcars
         [STAThread]
         public static void Main(string[] args)
         {
-            // Velopack debe ejecutarse ANTES de cualquier otra cosa
-            VelopackApp.Build().Run();
+            // Velopack must be executed before anything
+            // Disable auto-apply on startup - we handle updates manually in CheckForUpdates()
+            VelopackApp.Build()
+                .SetAutoApplyOnStartup(false)
+                .Run();
 
             _mutex = new Mutex(true, $"Global\\{BrandingConfig.AppId}_SingleInstance", out bool createdNew);
 
@@ -67,11 +72,16 @@ namespace MamAcars
             if (string.IsNullOrEmpty(BrandingConfig.UpdateUrl))
                 return;
 
+            var token = TokenStorage.GetToken();
+            if (string.IsNullOrEmpty(token))
+                return;
+
             try
             {
-                // TODO: Add authentication to update requests using user's Bearer token
-                // to prevent non-logged users from downloading updates
-                var mgr = new UpdateManager(BrandingConfig.UpdateUrl);
+                var downloader = new AuthenticatedFileDownloader(token);
+                var source = new SimpleWebSource(BrandingConfig.UpdateUrl, downloader);
+                var mgr = new UpdateManager(source);
+
                 var newVersion = await mgr.CheckForUpdatesAsync();
 
                 if (newVersion == null)
