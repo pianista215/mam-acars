@@ -13,12 +13,12 @@ namespace MamAcars.Utils
 
         public static string GetAppNameAndVersion()
         {
-            string appName = Assembly.GetExecutingAssembly().GetName().Name ?? "MamAcars";
+            string appId = BrandingConfig.AppId;
             string version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion ?? "Unknown";
 
-            return $"{appName} {version}";
+            return $"{appId} {version}";
         }
 
         private const double EarthRadiusKm = 6371.0;
