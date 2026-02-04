@@ -583,9 +583,13 @@ namespace MamAcars.Services
                 bool hasVS3AvgVariation = Math.Abs(_lastLoggedVars.VerticalSpeedLast3Avg - current.VerticalSpeedLast3Avg) > 400;
                 bool approachCondition = isInApproach && (hasHighVS3Avg || hasVS3AvgVariation);
 
+                // High descent rate near ground: below 1000 AGL with VS exceeding -1400 fpm
+                bool highDescentRateNearGround = current.AGLAltitude < 1000 && !current.OnGround && current.VerticalSpeedFPM < -1400;
+
                 if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800
                     || Math.Abs(_lastLoggedVars.VerticalSpeedFPM - current.VerticalSpeedFPM) > 400
-                    || approachCondition)
+                    || approachCondition
+                    || highDescentRateNearGround)
                 {
                     changes.Add(updateLatitude(current.Latitude));
                     changes.Add(updateLongitude(current.Longitude));
