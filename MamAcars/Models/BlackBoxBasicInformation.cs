@@ -18,6 +18,8 @@ namespace MamAcars.Models
 
         public int VerticalSpeedFPM { get; set; }
 
+        public int VerticalSpeedLast3Avg { get; set; }
+
         public int LandingVSFPM { get; set; }
 
         public int Squawk { get; set; }
