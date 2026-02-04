@@ -29,6 +29,7 @@ namespace MamAcars.Services
         private bool _simConnected = false;
         private bool _planeOnAirport = false;
         private BlackBoxBasicInformation _lastRecordedPosition;
+        private readonly Queue<int> _vsHistory = new Queue<int>(3);
 
         public bool SimConnected => _simConnected;
 
@@ -269,6 +270,14 @@ namespace MamAcars.Services
                 blackBoxBasicInformation.Altimeter = altimeterOffset.Value;
 
                 blackBoxBasicInformation.VerticalSpeedFPM = (int)(verticalSpeedFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
+
+                // Calculate rolling average of last 3 VS readings
+                if (_vsHistory.Count >= 3)
+                {
+                    _vsHistory.Dequeue();
+                }
+                _vsHistory.Enqueue(blackBoxBasicInformation.VerticalSpeedFPM);
+                blackBoxBasicInformation.VerticalSpeedLast3Avg = (int)_vsHistory.Average();
 
                 blackBoxBasicInformation.LandingVSFPM = (int)(landingFpmOffset.Value * 60.0 * MamUtils.METER_TO_FEETS / 256.0);
 

@@ -405,6 +405,12 @@ namespace MamAcars.Services
             return new KeyValuePair<string, object>("VSFpm", verticalSpeedFpm);
         }
 
+        private KeyValuePair<string, object> updateVerticalSpeedLast3Avg(int verticalSpeedLast3Avg)
+        {
+            _lastLoggedVars.VerticalSpeedLast3Avg = verticalSpeedLast3Avg;
+            return new KeyValuePair<string, object>("VSLast3Avg", verticalSpeedLast3Avg);
+        }
+
         private KeyValuePair<string, object> updateLandingVsSpeed(int landingVsFpm)
         {
             _lastLoggedVars.LandingVSFPM = landingVsFpm;
@@ -543,6 +549,7 @@ namespace MamAcars.Services
                 changes.Add(updateAGLAltitude(current.AGLAltitude));
                 changes.Add(updateAltimeter(current.Altimeter));
                 changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
+                changes.Add(updateVerticalSpeedLast3Avg(current.VerticalSpeedLast3Avg));
                 changes.Add(updateHeading(current.Heading));
                 changes.Add(updateGSKnots(current.GroundSpeedKnots));
                 changes.Add(updateIASKnots(current.IasKnots));
@@ -570,7 +577,19 @@ namespace MamAcars.Services
             }
             else
             {
-                if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800 || Math.Abs(_lastLoggedVars.VerticalSpeedFPM - current.VerticalSpeedFPM) > 400)
+                // Approach condition: below 3000 AGL with high VS3Avg or significant VS3Avg variation
+                bool isInApproach = current.AGLAltitude < 3000 && !current.OnGround;
+                bool hasHighVS3Avg = Math.Abs(current.VerticalSpeedLast3Avg) > 1200;
+                bool hasVS3AvgVariation = Math.Abs(_lastLoggedVars.VerticalSpeedLast3Avg - current.VerticalSpeedLast3Avg) > 400;
+                bool approachCondition = isInApproach && (hasHighVS3Avg || hasVS3AvgVariation);
+
+                // High descent rate near ground: below 1000 AGL with VS exceeding -1400 fpm
+                bool highDescentRateNearGround = current.AGLAltitude < 1000 && !current.OnGround && current.VerticalSpeedFPM < -1400;
+
+                if (Math.Abs(_lastLoggedVars.Altitude - current.Altitude) > 800
+                    || Math.Abs(_lastLoggedVars.VerticalSpeedFPM - current.VerticalSpeedFPM) > 400
+                    || approachCondition
+                    || highDescentRateNearGround)
                 {
                     changes.Add(updateLatitude(current.Latitude));
                     changes.Add(updateLongitude(current.Longitude));
@@ -578,6 +597,7 @@ namespace MamAcars.Services
                     changes.Add(updateAGLAltitude(current.AGLAltitude));
                     changes.Add(updateAltimeter(current.Altimeter));
                     changes.Add(updateVerticalSpeed(current.VerticalSpeedFPM));
+                    changes.Add(updateVerticalSpeedLast3Avg(current.VerticalSpeedLast3Avg));
                 }
 
                 if (Math.Abs(_lastLoggedVars.Heading - current.Heading) > 25)
