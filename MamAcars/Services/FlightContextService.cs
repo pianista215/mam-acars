@@ -83,10 +83,8 @@ namespace MamAcars.Services
             var flightInfo = await _apiService.CurrentFlightPlanAsync();
             if(flightInfo != null)
             {
-                if (flightInfo.IsSuccess)
-                {
-                    this.flightPlan = flightInfo;
-                } else if (flightInfo.AuthFailure)
+                this.flightPlan = flightInfo;
+                if (flightInfo.AuthFailure)
                 {
                     TokenStorage.DeleteToken();
                 }

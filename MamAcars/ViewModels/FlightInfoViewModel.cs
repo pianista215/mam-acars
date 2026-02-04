@@ -148,7 +148,7 @@ namespace MamAcars.ViewModels
                             AuthFailure = true;
                             StartFlightBtnText = "Relogin";
                             StartFlightBtnEnabled = true;
-                        } else if (flightInfo.EmptyFlightPlan)
+                        } else if (flightInfo.NotFound)
                         {
                             ShowErrorMessage("It appears you haven't submitted a flight plan. Please send one and try again.");
                             CloseOnClick = true;

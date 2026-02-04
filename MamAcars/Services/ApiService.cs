@@ -119,7 +119,7 @@ namespace MamAcars.Services
             }
             if (statusCode == System.Net.HttpStatusCode.NotFound)
             {
-                return new TResponse { IsSuccess = false, ErrorMessage = "Resource not found." };
+                return new TResponse { IsSuccess = false, NotFound = true, ErrorMessage = "Resource not found." };
             }
 
             var errorData = JsonSerializer.Deserialize<GenericErrorResponse>(responseContent);
@@ -196,6 +196,7 @@ namespace MamAcars.Services
         public bool IsSuccess { get; set; }
         public string ErrorMessage { get; set; }
         public bool AuthFailure { get; set; } = false;
+        public bool NotFound { get; set; } = false;
     }
 
     public class GenericErrorResponse
@@ -216,7 +217,6 @@ namespace MamAcars.Services
 
     public class FlightPlanInfoResponse : BaseResponse
     {
-        public bool EmptyFlightPlan { get; set; } = false;
         public long id { get; set; }
         public string departure_icao { get; set; }
         public double departure_latitude { get; set; }
