@@ -23,11 +23,14 @@ namespace MamAcars.Services
 
         public ApiService()
         {
-            _httpClient = new HttpClient
+            _httpClient = new HttpClient(new HttpClientHandler { UseCookies = false })
             {
                 BaseAddress = new Uri(BrandingConfig.ApiBaseUrl),
                 Timeout = TimeSpan.FromSeconds(10)
             };
+
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.Add("X-App-Name", acarsClientVersion);
         }
 
         public void SetBearerToken(string token)
@@ -37,18 +40,10 @@ namespace MamAcars.Services
 
         private string acarsClientVersion = MamUtils.GetAppNameAndVersion();
 
-        private void SetDefaultHeaders()
-        {
-            _httpClient.DefaultRequestHeaders.Accept.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.Add("X-App-Name", acarsClientVersion);
-        }
-
         private async Task<TResponse> SendRequestAsync<TRequest, TResponse>(string url, HttpMethod method, TRequest? requestData = null)
         where TRequest : class
         where TResponse : BaseResponse, new()
         {
-            SetDefaultHeaders();
             bool isLoginRequest = url.Contains("v1/auth/login");
 
             try
